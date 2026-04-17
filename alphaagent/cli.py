@@ -12,6 +12,7 @@ from alphaagent.backtest.engine import BacktestEngine
 from alphaagent.config import AgentConfig, AppConfig, load_config
 from alphaagent.core.event_bus import EventBus
 from alphaagent.data.base import DataFeed, DataSource
+from alphaagent.data.cache import CachedDataSource
 from alphaagent.data.csv_source import CSVDataSource
 from alphaagent.execution.simulated import SimulatedExecutionHandler
 from alphaagent.portfolio.portfolio import Portfolio
@@ -20,15 +21,27 @@ from alphaagent.strategy.ma_cross import MACrossStrategy
 
 
 def _build_data_source(cfg: AppConfig) -> DataSource:
+    source: DataSource
     if cfg.data.source == "csv":
         if not cfg.data.root:
             raise ValueError("data.root is required for csv source")
-        return CSVDataSource(cfg.data.root)
-    if cfg.data.source == "akshare":
+        source = CSVDataSource(cfg.data.root)
+    elif cfg.data.source == "akshare":
         from alphaagent.data.akshare_source import AkShareDataSource
 
-        return AkShareDataSource()
-    raise ValueError(f"unknown data source: {cfg.data.source}")
+        source = AkShareDataSource(adjust=cfg.data.adjust or "qfq")
+    elif cfg.data.source == "tushare":
+        from alphaagent.data.tushare_source import TushareDataSource
+
+        source = TushareDataSource(
+            token=cfg.data.tushare_token, adjust=cfg.data.adjust or "qfq"
+        )
+    else:
+        raise ValueError(f"unknown data source: {cfg.data.source}")
+
+    if cfg.data.cache_dir:
+        source = CachedDataSource(source, cfg.data.cache_dir)
+    return source
 
 
 def _build_strategy(cfg: AppConfig) -> Strategy:

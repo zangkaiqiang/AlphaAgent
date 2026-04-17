@@ -15,6 +15,9 @@ class DataConfig(BaseModel):
     symbols: list[str] = Field(default_factory=list)
     start: date
     end: date
+    adjust: str = "qfq"  # qfq | hfq | "" (akshare/tushare)
+    tushare_token: str | None = None  # or via TUSHARE_TOKEN env
+    cache_dir: str | None = None  # enables CachedDataSource when set
 
 
 class StrategyConfig(BaseModel):

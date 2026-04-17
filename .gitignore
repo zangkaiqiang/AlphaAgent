@@ -23,7 +23,7 @@ coverage.xml
 *.swp
 .DS_Store
 
-data/
+/data/
 *.db
 *.sqlite
 *.parquet

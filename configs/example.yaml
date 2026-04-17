@@ -1,12 +1,15 @@
 # AlphaAgent example config
 data:
-  source: csv              # csv | akshare
-  root: ./data             # directory containing <symbol>.csv files
+  source: csv              # csv | akshare | tushare
+  root: ./data             # for csv: directory of <symbol>.csv files
   symbols:
     - "600000"
     - "000001"
   start: 2023-01-01
   end: 2023-12-31
+  adjust: qfq              # qfq | hfq | "" (akshare/tushare only)
+  cache_dir: ./data/cache  # enables local parquet cache; remove to disable
+  # tushare_token: ""      # or set TUSHARE_TOKEN env var
 
 strategy:
   name: ma_cross
