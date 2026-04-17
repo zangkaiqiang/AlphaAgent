@@ -43,7 +43,10 @@ portfolio:
   stamp_tax_rate: 0.001    # 千一 (卖出)
 
 execution:
+  backend: simulated       # simulated | paper | qmt
   slippage_bps: 5          # 5 bps one-way slippage
+  # qmt_path: "C:/QMT/userdata_mini"
+  # qmt_account: "123456"
 
 agent:
   enabled: false           # set true to route decisions through Claude

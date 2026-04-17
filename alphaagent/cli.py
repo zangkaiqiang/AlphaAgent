@@ -9,11 +9,13 @@ import click
 
 from alphaagent.agent.base import Agent, NullAgent
 from alphaagent.backtest.engine import BacktestEngine
+from alphaagent.broker.paper import PaperBroker
 from alphaagent.calendar.ashare import AShareCalendar
 from alphaagent.config import (
     AgentConfig,
     AppConfig,
     CalendarConfig,
+    ExecutionConfig,
     RiskConfig,
     StrategyConfig,
     load_config,
@@ -22,6 +24,8 @@ from alphaagent.core.event_bus import EventBus
 from alphaagent.data.base import DataFeed, DataSource
 from alphaagent.data.cache import CachedDataSource
 from alphaagent.data.csv_source import CSVDataSource
+from alphaagent.execution.base import ExecutionHandler
+from alphaagent.execution.broker_exec import BrokerExecutionHandler
 from alphaagent.execution.simulated import SimulatedExecutionHandler
 from alphaagent.portfolio.multi import MultiStrategyPortfolio, StrategyAllocation
 from alphaagent.portfolio.portfolio import Portfolio
@@ -126,6 +130,45 @@ def _build_calendar(cfg: CalendarConfig) -> AShareCalendar | None:
     return AShareCalendar(cache_path=cfg.cache_path)
 
 
+def _build_execution(
+    cfg: ExecutionConfig,
+    portfolio_cfg_cash: float,
+    portfolio_cfg_comm: float,
+    portfolio_cfg_min_comm: float,
+    portfolio_cfg_stamp: float,
+    event_bus: EventBus,
+) -> ExecutionHandler:
+    backend = cfg.backend
+    if backend == "simulated":
+        return SimulatedExecutionHandler(
+            event_bus=event_bus,
+            commission_rate=portfolio_cfg_comm,
+            min_commission=portfolio_cfg_min_comm,
+            stamp_tax_rate=portfolio_cfg_stamp,
+            slippage_bps=cfg.slippage_bps,
+        )
+    if backend == "paper":
+        broker = PaperBroker(
+            initial_cash=portfolio_cfg_cash,
+            commission_rate=portfolio_cfg_comm,
+            min_commission=portfolio_cfg_min_comm,
+            stamp_tax_rate=portfolio_cfg_stamp,
+            slippage_bps=cfg.slippage_bps,
+        )
+        return BrokerExecutionHandler(broker, event_bus)
+    if backend == "qmt":
+        if not cfg.qmt_path or not cfg.qmt_account:
+            raise ValueError(
+                "execution.backend=qmt requires qmt_path and qmt_account"
+            )
+        from alphaagent.broker.qmt import QMTBroker
+
+        broker = QMTBroker(qmt_path=cfg.qmt_path, qmt_account=cfg.qmt_account)
+        broker.connect()
+        return BrokerExecutionHandler(broker, event_bus)
+    raise ValueError(f"unknown execution backend: {backend!r}")
+
+
 def _build_sector_map(cfg: RiskConfig) -> SectorMap | None:
     if cfg.sectors and cfg.sectors_csv:
         raise ValueError("risk: specify either 'sectors' (inline) or 'sectors_csv', not both")
@@ -184,12 +227,13 @@ def backtest(config: Path) -> None:
 
     event_bus = EventBus()
     strategies, portfolio = _build_strategies_and_portfolio(cfg, event_bus)
-    execution = SimulatedExecutionHandler(
-        event_bus=event_bus,
-        commission_rate=cfg.portfolio.commission_rate,
-        min_commission=cfg.portfolio.min_commission,
-        stamp_tax_rate=cfg.portfolio.stamp_tax_rate,
-        slippage_bps=cfg.execution.slippage_bps,
+    execution = _build_execution(
+        cfg.execution,
+        cfg.portfolio.initial_cash,
+        cfg.portfolio.commission_rate,
+        cfg.portfolio.min_commission,
+        cfg.portfolio.stamp_tax_rate,
+        event_bus,
     )
     agent = _build_agent(cfg.agent)
     calendar = _build_calendar(cfg.calendar)
@@ -197,6 +241,7 @@ def backtest(config: Path) -> None:
 
     click.echo(f"Agent: {type(agent).__name__} (enabled={cfg.agent.enabled})")
     click.echo(f"Calendar: {'on' if calendar else 'off'}  Freq: {cfg.data.freq}")
+    click.echo(f"Execution: {cfg.execution.backend}")
     click.echo(f"Strategies: {[s.strategy_id for s in strategies]}")
     if risk_manager is not None:
         click.echo(f"Risk rules: {[r.name for r in risk_manager.rules]}")

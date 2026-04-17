@@ -14,6 +14,7 @@
 - **策略即插件**:继承 `Strategy` 基类,注册即用
 - **多策略组合**:并行运行多个策略,独立子账户,按权重分配资金,含每策略 PnL 归因
 - **Agent 层可开关**:通过配置启用 LLM 选股/调参,默认关闭
+- **券商对接**:`simulated` 回测 / `paper` 模拟实盘(次 bar 开盘成交)/ `qmt` 真实盘(miniQMT)
 - **自动化调度**:APScheduler 驱动的定时任务
 
 ## 目录结构
@@ -297,6 +298,65 @@ strategies:
     strategy_id: mean_rev
 ```
 
+## 券商对接(回测 / 模拟 / 实盘)
+
+回测、模拟盘、实盘共用同一套策略代码,只切换执行后端:
+
+```yaml
+execution:
+  backend: simulated       # simulated | paper | qmt
+  slippage_bps: 5
+  # qmt 专用(backend=qmt 时必填):
+  # qmt_path: "C:/QMT/userdata_mini"
+  # qmt_account: "123456"
+```
+
+| 后端 | 成交模型 | 用途 |
+|---|---|---|
+| `simulated` | 当根 bar **收盘价**成交 | 快速批量回测;**注意隐含 lookahead 偏差** |
+| `paper` | **下一根 bar 开盘价**成交 + 滑点 + 手续费 + T+1 | 贴近实盘的模拟账户,实盘前必测 |
+| `qmt` | 真实委托,实际成交价由交易所回报 | miniQMT 实盘(需要开通量化权限) |
+
+### 为什么 simulated 回测会比实盘好看
+
+同一策略(MA Cross 5/20)跑 240 根日线:
+- `simulated`: **+1.59%**(当根收盘价成交)
+- `paper`: **-0.15%**(下一根开盘价成交 + 5 bps 滑点)
+
+差距来自**隐含的 lookahead**:策略在 T 根收盘看到信号,不可能当根收盘成交。`paper` 后端强制延迟 1 根 bar,揭示这一点。**实盘前务必用 paper 验证**。
+
+### QMT 实盘接入
+
+`alphaagent/broker/qmt.py` 是基于 `xtquant` 的适配器骨架,已经实现:下单、查持仓、查现金、成交回调 → `FillEvent`。
+
+准备清单:
+1. 联系券商开通**量化接口权限**(普通账户升级)
+2. 安装 miniQMT 客户端,登录一次
+3. `pip install xtquant`(或用客户端自带 wheel)
+4. 填写配置 `qmt_path`(客户端安装目录)和 `qmt_account`(资金账号)
+5. **先用 QMT 自带的模拟账户跑通流程**,再切真实账户
+
+代码层面还需要补充(生产前必备):
+- 启动时用 `query_stock_positions` 对账,不要只依赖回调
+- 网络中断重连逻辑
+- 订单状态轮询(部分成交、废单)
+- 限价单价格校验(涨跌停、tick size)
+
+### XTP
+
+中泰 XTP(`vnpy_xtp` 或原生 API)暂未接入,但结构与 QMT 一致:新建 `broker/xtp.py` 实现同一 `Broker` 接口即可,`BacktestEngine` 无需改动。
+
+### 编程 API
+
+```python
+from alphaagent.broker import PaperBroker
+from alphaagent.execution import BrokerExecutionHandler
+
+broker = PaperBroker(initial_cash=1_000_000, slippage_bps=5)
+execution = BrokerExecutionHandler(broker, event_bus)
+engine = BacktestEngine(feed, strategy, portfolio, execution, event_bus)
+```
+
 ## 组合级风控
 
 策略级规则(T+1、涨跌停、最小手数)已经嵌在引擎里。**组合级**规则用来限制整个账户的风险敞口,在订单提交给执行层**之前**检查,可以**降档**(允许但减少数量)或**拒单**(数量归零)。
@@ -414,6 +474,9 @@ ruff check alphaagent tests
 - [x] 多策略组合 + 独立子账户 + 每策略归因
 - [x] 策略库:MA Cross / RSI / Bollinger × 2 / 截面动量
 - [x] 组合级风控(总敞口、单股、只数、板块集中度、相关性)
+- [x] 券商对接:PaperBroker 模拟盘 + QMT 实盘骨架
+- [ ] XTP 实盘接入
+- [ ] QMT 生产化(对账、重连、订单状态轮询)
 - [ ] 实盘券商对接(QMT / XTP)
 - [ ] 分红/送股除权事件流
 - [ ] LLM Agent 决策链路接入

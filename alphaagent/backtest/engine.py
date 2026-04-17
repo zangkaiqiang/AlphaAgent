@@ -12,7 +12,7 @@ from alphaagent.core.event_bus import EventBus
 from alphaagent.core.events import EventType, FillEvent, MarketEvent
 from alphaagent.core.types import Bar
 from alphaagent.data.base import DataFeed
-from alphaagent.execution.simulated import SimulatedExecutionHandler
+from alphaagent.execution.base import ExecutionHandler
 from alphaagent.metrics.summary import PerformanceSummary, summarize
 from alphaagent.portfolio.multi import MultiStrategyPortfolio
 from alphaagent.portfolio.portfolio import Portfolio
@@ -84,7 +84,7 @@ class BacktestEngine:
         feed: DataFeed,
         strategies: Strategy | list[Strategy],
         portfolio: PortfolioLike,
-        execution: SimulatedExecutionHandler,
+        execution: ExecutionHandler,
         event_bus: EventBus,
         calendar: AShareCalendar | None = None,
         risk_manager: PortfolioRiskManager | None = None,

@@ -45,7 +45,11 @@ class PortfolioConfig(BaseModel):
 
 
 class ExecutionConfig(BaseModel):
+    backend: str = "simulated"  # simulated | paper | qmt
     slippage_bps: float = 0.0
+    # QMT-only (required when backend=qmt):
+    qmt_path: str | None = None
+    qmt_account: str | None = None
 
 
 class RiskConfig(BaseModel):
