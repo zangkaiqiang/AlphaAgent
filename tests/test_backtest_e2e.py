@@ -49,6 +49,7 @@ def test_backtest_runs_end_to_end():
     assert result.initial_cash == 1_000_000
     assert len(result.equity_curve) == len(frames["600000"]) * 2
     # Should have triggered at least one fill given the trending data.
-    assert result.fills >= 1
+    assert result.fill_count >= 1
+    assert len(result.fills) == result.fill_count
     # Equity must remain finite and non-negative.
     assert result.final_equity > 0

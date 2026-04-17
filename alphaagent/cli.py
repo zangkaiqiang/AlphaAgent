@@ -112,9 +112,12 @@ def backtest(config: Path) -> None:
 
     click.echo(f"Initial: {result.initial_cash:,.2f}")
     click.echo(f"Final:   {result.final_equity:,.2f}")
-    click.echo(f"Return:  {result.total_return:.2%}")
-    click.echo(f"Fills:   {result.fills}")
     click.echo(f"Bars:    processed={result.bars_processed} skipped={result.bars_skipped}")
+    click.echo(f"Fills:   {result.fill_count}")
+    click.echo("")
+    click.echo("Performance")
+    click.echo("-----------")
+    click.echo(result.performance().format())
 
 
 if __name__ == "__main__":
