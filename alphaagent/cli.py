@@ -10,15 +10,24 @@ import click
 from alphaagent.agent.base import Agent, NullAgent
 from alphaagent.backtest.engine import BacktestEngine
 from alphaagent.calendar.ashare import AShareCalendar
-from alphaagent.config import AgentConfig, AppConfig, CalendarConfig, load_config
+from alphaagent.config import (
+    AgentConfig,
+    AppConfig,
+    CalendarConfig,
+    StrategyConfig,
+    load_config,
+)
 from alphaagent.core.event_bus import EventBus
 from alphaagent.data.base import DataFeed, DataSource
 from alphaagent.data.cache import CachedDataSource
 from alphaagent.data.csv_source import CSVDataSource
 from alphaagent.execution.simulated import SimulatedExecutionHandler
+from alphaagent.portfolio.multi import MultiStrategyPortfolio, StrategyAllocation
 from alphaagent.portfolio.portfolio import Portfolio
 from alphaagent.strategy.base import Strategy
 from alphaagent.strategy.ma_cross import MACrossStrategy
+
+PortfolioLike = Portfolio | MultiStrategyPortfolio
 
 
 def _build_data_source(cfg: AppConfig) -> DataSource:
@@ -45,11 +54,51 @@ def _build_data_source(cfg: AppConfig) -> DataSource:
     return source
 
 
-def _build_strategy(cfg: AppConfig) -> Strategy:
-    name = cfg.strategy.name
-    if name == "ma_cross":
-        return MACrossStrategy(**cfg.strategy.params)
-    raise ValueError(f"unknown strategy: {name}")
+def _build_strategy(scfg: StrategyConfig) -> Strategy:
+    """Build a Strategy from a config entry, applying strategy_id override."""
+    params = dict(scfg.params)
+    if scfg.strategy_id:
+        params.setdefault("strategy_id", scfg.strategy_id)
+
+    if scfg.name == "ma_cross":
+        return MACrossStrategy(**params)
+    raise ValueError(f"unknown strategy: {scfg.name}")
+
+
+def _build_strategies_and_portfolio(
+    cfg: AppConfig, event_bus: EventBus
+) -> tuple[list[Strategy], PortfolioLike]:
+    strategies = [_build_strategy(scfg) for scfg in cfg.strategies]
+
+    if len(strategies) == 1:
+        portfolio: PortfolioLike = Portfolio(
+            initial_cash=cfg.portfolio.initial_cash,
+            event_bus=event_bus,
+            target_pct=cfg.strategies[0].target_pct or cfg.portfolio.target_pct,
+            commission_rate=cfg.portfolio.commission_rate,
+            min_commission=cfg.portfolio.min_commission,
+            stamp_tax_rate=cfg.portfolio.stamp_tax_rate,
+            strategy_id=strategies[0].strategy_id,
+        )
+        return strategies, portfolio
+
+    allocations = [
+        StrategyAllocation(
+            strategy_id=strategy.strategy_id,
+            weight=scfg.capital_weight,
+            target_pct=scfg.target_pct or cfg.portfolio.target_pct,
+        )
+        for strategy, scfg in zip(strategies, cfg.strategies, strict=True)
+    ]
+    portfolio = MultiStrategyPortfolio(
+        initial_cash=cfg.portfolio.initial_cash,
+        event_bus=event_bus,
+        allocations=allocations,
+        commission_rate=cfg.portfolio.commission_rate,
+        min_commission=cfg.portfolio.min_commission,
+        stamp_tax_rate=cfg.portfolio.stamp_tax_rate,
+    )
+    return strategies, portfolio
 
 
 def _build_agent(cfg: AgentConfig) -> Agent:
@@ -86,14 +135,7 @@ def backtest(config: Path) -> None:
     feed = DataFeed(frames)
 
     event_bus = EventBus()
-    portfolio = Portfolio(
-        initial_cash=cfg.portfolio.initial_cash,
-        event_bus=event_bus,
-        target_pct=cfg.portfolio.target_pct,
-        commission_rate=cfg.portfolio.commission_rate,
-        min_commission=cfg.portfolio.min_commission,
-        stamp_tax_rate=cfg.portfolio.stamp_tax_rate,
-    )
+    strategies, portfolio = _build_strategies_and_portfolio(cfg, event_bus)
     execution = SimulatedExecutionHandler(
         event_bus=event_bus,
         commission_rate=cfg.portfolio.commission_rate,
@@ -101,13 +143,21 @@ def backtest(config: Path) -> None:
         stamp_tax_rate=cfg.portfolio.stamp_tax_rate,
         slippage_bps=cfg.execution.slippage_bps,
     )
-    strategy = _build_strategy(cfg)
     agent = _build_agent(cfg.agent)
     calendar = _build_calendar(cfg.calendar)
+
     click.echo(f"Agent: {type(agent).__name__} (enabled={cfg.agent.enabled})")
     click.echo(f"Calendar: {'on' if calendar else 'off'}  Freq: {cfg.data.freq}")
+    click.echo(f"Strategies: {[s.strategy_id for s in strategies]}")
 
-    engine = BacktestEngine(feed, strategy, portfolio, execution, event_bus, calendar=calendar)
+    engine = BacktestEngine(
+        feed,
+        strategies if len(strategies) > 1 else strategies[0],
+        portfolio,
+        execution,
+        event_bus,
+        calendar=calendar,
+    )
     result = engine.run()
 
     click.echo(f"Initial: {result.initial_cash:,.2f}")
@@ -115,9 +165,16 @@ def backtest(config: Path) -> None:
     click.echo(f"Bars:    processed={result.bars_processed} skipped={result.bars_skipped}")
     click.echo(f"Fills:   {result.fill_count}")
     click.echo("")
-    click.echo("Performance")
-    click.echo("-----------")
+    click.echo("Performance (aggregate)")
+    click.echo("-----------------------")
     click.echo(result.performance().format())
+
+    if result.equity_by_strategy:
+        for sid, perf in result.performance_by_strategy().items():
+            click.echo("")
+            click.echo(f"Performance (strategy={sid})")
+            click.echo("-" * (18 + len(sid)))
+            click.echo(perf.format())
 
 
 if __name__ == "__main__":

@@ -61,6 +61,7 @@ class Portfolio:
         commission_rate: float = 3e-4,
         min_commission: float = 5.0,
         stamp_tax_rate: float = 1e-3,
+        strategy_id: str = "",
     ):
         self.initial_cash = initial_cash
         self.cash = initial_cash
@@ -69,6 +70,7 @@ class Portfolio:
         self.commission_rate = commission_rate
         self.min_commission = min_commission
         self.stamp_tax_rate = stamp_tax_rate
+        self.strategy_id = strategy_id
 
         self.positions: dict[str, Position] = {}
         self._last_price: dict[str, float] = {}
@@ -121,6 +123,7 @@ class Portfolio:
                 quantity=shares,
                 order_type=OrderType.MARKET,
                 order_id=str(uuid4()),
+                strategy_id=self.strategy_id or signal.strategy_id,
             )
 
         pos = self.positions.get(signal.symbol)
@@ -136,6 +139,7 @@ class Portfolio:
             quantity=sellable,
             order_type=OrderType.MARKET,
             order_id=str(uuid4()),
+            strategy_id=self.strategy_id or signal.strategy_id,
         )
 
     # ---- valuation ------------------------------------------------------

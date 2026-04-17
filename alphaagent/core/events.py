@@ -65,6 +65,7 @@ class OrderEvent(Event):
     order_type: OrderType = OrderType.MARKET
     limit_price: float | None = None
     order_id: str = ""
+    strategy_id: str = ""
 
     def __init__(
         self,
@@ -75,6 +76,7 @@ class OrderEvent(Event):
         order_type: OrderType = OrderType.MARKET,
         limit_price: float | None = None,
         order_id: str = "",
+        strategy_id: str = "",
     ):
         super().__init__(type=EventType.ORDER, timestamp=timestamp)
         self.symbol = symbol
@@ -83,6 +85,7 @@ class OrderEvent(Event):
         self.order_type = order_type
         self.limit_price = limit_price
         self.order_id = order_id
+        self.strategy_id = strategy_id
 
 
 @dataclass
@@ -96,6 +99,7 @@ class FillEvent(Event):
     commission: float = 0.0
     stamp_tax: float = 0.0
     order_id: str = ""
+    strategy_id: str = ""
     metadata: dict = field(default_factory=dict)
 
     def __init__(
@@ -108,6 +112,7 @@ class FillEvent(Event):
         commission: float = 0.0,
         stamp_tax: float = 0.0,
         order_id: str = "",
+        strategy_id: str = "",
         metadata: dict | None = None,
     ):
         super().__init__(type=EventType.FILL, timestamp=timestamp)
@@ -118,6 +123,7 @@ class FillEvent(Event):
         self.commission = commission
         self.stamp_tax = stamp_tax
         self.order_id = order_id
+        self.strategy_id = strategy_id
         self.metadata = metadata or {}
 
     @property

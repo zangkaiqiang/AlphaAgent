@@ -11,6 +11,7 @@
 - **交易日历**:SSE 日历 + 会话窗口(09:30-11:30、13:00-15:00),自动过滤非交易时段
 - **性能指标**:Sharpe、Sortino、最大回撤、Calmar、胜率、盈利因子等 13 项
 - **策略即插件**:继承 `Strategy` 基类,注册即用
+- **多策略组合**:并行运行多个策略,独立子账户,按权重分配资金,含每策略 PnL 归因
 - **Agent 层可开关**:通过配置启用 LLM 选股/调参,默认关闭
 - **自动化调度**:APScheduler 驱动的定时任务
 
@@ -193,6 +194,62 @@ data:
 
 当 `cache_dir` 被设置时,`CachedDataSource` 会把每个 symbol 的行情落为 Parquet。后续回测只会请求 **缓存范围之外** 的时间段(头/尾增量),大幅减少网络调用。
 
+## 多策略组合
+
+并行运行多个策略,每个策略拿到一份**独立的子账户**(初始资金按权重切分),信号与持仓完全隔离,不会互相挤占现金或仓位。配置里把 `strategy` 改成 `strategies` 列表:
+
+```yaml
+strategies:
+  - name: ma_cross
+    params: { fast: 5, slow: 20 }
+    capital_weight: 0.5    # 50% 资金
+    strategy_id: ma_fast   # 自定义 ID 区分同类策略
+    target_pct: 0.3        # 覆盖全局 target_pct(可选)
+
+  - name: ma_cross
+    params: { fast: 10, slow: 40 }
+    capital_weight: 0.5
+    strategy_id: ma_slow
+```
+
+- `capital_weight` 必须跨所有策略加起来 = 1.0
+- `strategy_id` 可选,不填用策略默认 ID;**运行同一策略的多个参数组合时必填**以区分
+- 每笔订单和成交都带 `strategy_id`,回测结束后可按策略单独看性能
+
+回测输出会同时打印**聚合绩效**和**每策略绩效**:
+
+```
+Performance (aggregate)
+Total Return: 1.43%   Sharpe: 0.90   MDD: -1.00%   Trades: 8
+
+Performance (strategy=ma_fast)
+Total Return: 1.59%   Sharpe: 0.82   MDD: -1.24%   Trades: 6
+
+Performance (strategy=ma_slow)
+Total Return: 1.27%   Sharpe: 0.82   MDD: -1.14%   Trades: 1
+```
+
+> 💡 典型用法:组合一个趋势追踪(低胜率高盈亏比)+ 一个均值回归(高胜率低盈亏比),整体 Sharpe 往往高于单策略,且 MDD 更小 — 这就是分散化收益。
+
+编程 API:
+
+```python
+from alphaagent.portfolio import MultiStrategyPortfolio, StrategyAllocation
+
+portfolio = MultiStrategyPortfolio(
+    initial_cash=1_000_000,
+    event_bus=event_bus,
+    allocations=[
+        StrategyAllocation("ma_fast", weight=0.5, target_pct=0.3),
+        StrategyAllocation("ma_slow", weight=0.5, target_pct=0.3),
+    ],
+)
+engine = BacktestEngine(feed, [strat_fast, strat_slow], portfolio, execution, event_bus)
+result = engine.run()
+for sid, perf in result.performance_by_strategy().items():
+    print(sid, perf.sharpe, perf.max_drawdown)
+```
+
 ## 编写自定义策略
 
 在 `strategies/` 下新建文件,继承 `Strategy`:
@@ -244,7 +301,8 @@ ruff check alphaagent tests
 - [x] AkShare + Tushare 数据源 + Parquet 缓存
 - [x] 日/分钟频 + 交易日历过滤
 - [x] 13 项性能指标
-- [ ] 多策略组合 + 组合级风控
+- [x] 多策略组合 + 独立子账户 + 每策略归因
+- [ ] 组合级风控(总敞口、相关性限制)
 - [ ] 实盘券商对接(QMT / XTP)
 - [ ] 分红/送股除权事件流
 - [ ] LLM Agent 决策链路接入

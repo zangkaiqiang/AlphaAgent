@@ -60,5 +60,6 @@ class SimulatedExecutionHandler(ExecutionHandler):
                 commission=commission,
                 stamp_tax=stamp_tax,
                 order_id=event.order_id,
+                strategy_id=event.strategy_id,
             )
         )
