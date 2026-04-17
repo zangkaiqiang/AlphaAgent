@@ -20,6 +20,14 @@ risk:                      # portfolio-level limits (optional; omit fields to di
   # max_gross_exposure: 0.8         # total positions <= 80% equity
   # max_per_symbol_exposure: 0.3    # any single symbol <= 30% equity
   # max_position_count: 10          # hold <= 10 symbols simultaneously
+  # max_sector_exposure: 0.4        # any single sector <= 40% equity
+  # sectors:                        #   inline symbol -> sector map
+  #   "600000": "银行"
+  #   "000001": "银行"
+  #   "600519": "白酒"
+  # sectors_csv: ./data/sectors.csv #   or load from CSV (symbol,sector)
+  # max_pairwise_correlation: 0.85  # reject new symbol if |corr| > X with any held
+  # correlation_lookback: 60        # days of returns used for correlation
 
 strategy:
   name: ma_cross

@@ -308,6 +308,18 @@ risk:
   max_gross_exposure: 0.8         # 总持仓市值 ≤ 80% 总资产(留 20% 现金缓冲)
   max_per_symbol_exposure: 0.3    # 单只股票 ≤ 30% 总资产
   max_position_count: 10          # 最多同时持有 10 只股票
+
+  # 板块集中度:需要符号 → 板块映射
+  max_sector_exposure: 0.4        # 任一板块合计 ≤ 40% 总资产
+  sectors:                        # 内联映射
+    "600000": "银行"
+    "000001": "银行"
+    "600519": "白酒"
+  # 或用 CSV: sectors_csv: ./data/sectors.csv
+
+  # 相关性:防止多个高度同涨同跌的持仓变相加仓
+  max_pairwise_correlation: 0.85  # 新开仓与任一现有持仓 |corr| > 0.85 则拒单
+  correlation_lookback: 60        # 用于算相关系数的收益窗口长度(bar 数)
 ```
 
 | 规则 | 作用 | 触发后 |
@@ -315,6 +327,8 @@ risk:
 | `max_gross_exposure` | 总仓位 / 总资产 ≤ X | 按可用额度**降档**下单数量 |
 | `max_per_symbol_exposure` | 单股仓位 / 总资产 ≤ X | 按单股可用额度**降档** |
 | `max_position_count` | 同时持仓的股票数 ≤ N | 已满时开新股票**拒单**(加仓现有仓位不受限) |
+| `max_sector_exposure` | 单板块合计仓位 / 总资产 ≤ X | 板块满额后**降档**或**拒单** |
+| `max_pairwise_correlation` | 新开仓与任一现有持仓 \|corr\| ≤ X | 超阈值**拒单**(加仓现有仓位不受限) |
 
 **仅限制 BUY**:SELL 一律放行(减仓永远不增加敞口)。多规则取**最小值**,并向下取整到 100 股倍数。
 
@@ -399,8 +413,7 @@ ruff check alphaagent tests
 - [x] 13 项性能指标
 - [x] 多策略组合 + 独立子账户 + 每策略归因
 - [x] 策略库:MA Cross / RSI / Bollinger × 2 / 截面动量
-- [x] 组合级风控(总敞口、单股敞口、持仓只数)
-- [ ] 相关性/板块集中度限制
+- [x] 组合级风控(总敞口、单股、只数、板块集中度、相关性)
 - [ ] 实盘券商对接(QMT / XTP)
 - [ ] 分红/送股除权事件流
 - [ ] LLM Agent 决策链路接入

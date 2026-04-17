@@ -126,6 +126,11 @@ class BacktestEngine:
         event_bus.subscribe(EventType.MARKET, self.portfolio.handle_market)
         for strategy in self.strategies:
             event_bus.subscribe(EventType.MARKET, strategy.handle_market)
+        # Stateful risk rules (e.g. correlation) need to see market data to
+        # keep their internal windows current. Subscribed after the portfolio
+        # so view.last_price is already fresh if rules want to peek.
+        if self.risk_manager is not None:
+            event_bus.subscribe(EventType.MARKET, self.risk_manager.handle_market)
         event_bus.subscribe(EventType.SIGNAL, self.portfolio.handle_signal)
         # Risk manager must see ORDER events BEFORE execution so that any
         # downsize or rejection is applied before the fill is generated.

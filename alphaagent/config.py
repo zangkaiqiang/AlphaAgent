@@ -54,6 +54,11 @@ class RiskConfig(BaseModel):
     max_gross_exposure: float | None = None  # e.g. 0.8 => cap at 80% of equity
     max_per_symbol_exposure: float | None = None  # e.g. 0.3 => any single symbol ≤ 30%
     max_position_count: int | None = None  # max distinct symbols held at once
+    max_sector_exposure: float | None = None  # e.g. 0.4 => any single sector ≤ 40%
+    sectors: dict[str, str] | None = None  # inline symbol -> sector map
+    sectors_csv: str | None = None  # path to symbol,sector CSV (alternative to inline)
+    max_pairwise_correlation: float | None = None  # e.g. 0.85
+    correlation_lookback: int = 60
 
 
 class AgentConfig(BaseModel):

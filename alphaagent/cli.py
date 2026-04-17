@@ -27,11 +27,14 @@ from alphaagent.portfolio.multi import MultiStrategyPortfolio, StrategyAllocatio
 from alphaagent.portfolio.portfolio import Portfolio
 from alphaagent.risk.portfolio_risk import (
     MaxGrossExposure,
+    MaxPairwiseCorrelation,
     MaxPerSymbolExposure,
     MaxPositionCount,
+    MaxSectorExposure,
     PortfolioRiskManager,
     RiskRule,
 )
+from alphaagent.risk.sector_map import CSVSectorMap, DictSectorMap, SectorMap
 from alphaagent.strategy import registry
 from alphaagent.strategy.base import Strategy
 
@@ -123,6 +126,16 @@ def _build_calendar(cfg: CalendarConfig) -> AShareCalendar | None:
     return AShareCalendar(cache_path=cfg.cache_path)
 
 
+def _build_sector_map(cfg: RiskConfig) -> SectorMap | None:
+    if cfg.sectors and cfg.sectors_csv:
+        raise ValueError("risk: specify either 'sectors' (inline) or 'sectors_csv', not both")
+    if cfg.sectors:
+        return DictSectorMap(cfg.sectors)
+    if cfg.sectors_csv:
+        return CSVSectorMap(cfg.sectors_csv)
+    return None
+
+
 def _build_risk_manager(
     cfg: RiskConfig, portfolio: PortfolioLike
 ) -> PortfolioRiskManager | None:
@@ -133,6 +146,20 @@ def _build_risk_manager(
         rules.append(MaxPerSymbolExposure(cfg.max_per_symbol_exposure))
     if cfg.max_position_count is not None:
         rules.append(MaxPositionCount(cfg.max_position_count))
+    if cfg.max_sector_exposure is not None:
+        sector_map = _build_sector_map(cfg)
+        if sector_map is None:
+            raise ValueError(
+                "risk.max_sector_exposure requires either 'sectors' or 'sectors_csv'"
+            )
+        rules.append(MaxSectorExposure(cfg.max_sector_exposure, sector_map))
+    if cfg.max_pairwise_correlation is not None:
+        rules.append(
+            MaxPairwiseCorrelation(
+                max_corr=cfg.max_pairwise_correlation,
+                lookback=cfg.correlation_lookback,
+            )
+        )
     if not rules:
         return None
     return PortfolioRiskManager(portfolio, rules)
