@@ -7,9 +7,14 @@ data:
     - "000001"
   start: 2023-01-01
   end: 2023-12-31
+  freq: 1d                 # 1d | 1m | 5m | 15m | 30m | 60m
   adjust: qfq              # qfq | hfq | "" (akshare/tushare only)
   cache_dir: ./data/cache  # enables local parquet cache; remove to disable
   # tushare_token: ""      # or set TUSHARE_TOKEN env var
+
+calendar:
+  enabled: false           # set true to filter non-trading days / sessions
+  cache_path: ./data/cache/ashare_calendar.parquet
 
 strategy:
   name: ma_cross

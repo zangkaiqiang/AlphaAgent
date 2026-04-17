@@ -31,3 +31,11 @@ def test_constructor_accepts_explicit_token():
     src = TushareDataSource(token="dummy")
     assert src.token == "dummy"
     assert src.adjust == "qfq"
+
+
+def test_unsupported_freq_raises():
+    src = TushareDataSource(token="dummy")
+    import datetime as _dt
+
+    with pytest.raises(NotImplementedError):
+        src.get_bars("600000", _dt.date(2024, 1, 2), _dt.date(2024, 1, 3), freq="tick")

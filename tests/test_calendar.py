@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, time
 
 import pytest
 
@@ -31,3 +31,25 @@ def test_next_and_prev(cal):
 def test_trading_days_between(cal):
     days = cal.trading_days_between(date(2024, 1, 2), date(2024, 1, 5))
     assert days == [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 4), date(2024, 1, 5)]
+
+
+def test_is_session_time():
+    assert AShareCalendar.is_session_time(time(9, 30))
+    assert AShareCalendar.is_session_time(time(11, 30))
+    assert AShareCalendar.is_session_time(time(13, 0))
+    assert AShareCalendar.is_session_time(time(15, 0))
+    # lunch break
+    assert not AShareCalendar.is_session_time(time(12, 0))
+    # pre-market
+    assert not AShareCalendar.is_session_time(time(9, 0))
+    # after close
+    assert not AShareCalendar.is_session_time(time(15, 30))
+
+
+def test_is_trading_session_combines_date_and_time(cal):
+    # Trading day within session window.
+    assert cal.is_trading_session(datetime(2024, 1, 2, 10, 0))
+    # Trading day but lunch break.
+    assert not cal.is_trading_session(datetime(2024, 1, 2, 12, 0))
+    # Non-trading day, regardless of time.
+    assert not cal.is_trading_session(datetime(2024, 1, 6, 10, 0))

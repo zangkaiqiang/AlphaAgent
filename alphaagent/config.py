@@ -15,9 +15,15 @@ class DataConfig(BaseModel):
     symbols: list[str] = Field(default_factory=list)
     start: date
     end: date
+    freq: str = "1d"  # 1d | 1m | 5m | 15m | 30m | 60m
     adjust: str = "qfq"  # qfq | hfq | "" (akshare/tushare)
     tushare_token: str | None = None  # or via TUSHARE_TOKEN env
     cache_dir: str | None = None  # enables CachedDataSource when set
+
+
+class CalendarConfig(BaseModel):
+    enabled: bool = False
+    cache_path: str | None = None  # parquet path for akshare calendar cache
 
 
 class StrategyConfig(BaseModel):
@@ -49,6 +55,7 @@ class AppConfig(BaseModel):
     portfolio: PortfolioConfig = PortfolioConfig()
     execution: ExecutionConfig = ExecutionConfig()
     agent: AgentConfig = AgentConfig()
+    calendar: CalendarConfig = CalendarConfig()
 
 
 def load_config(path: str | Path) -> AppConfig:

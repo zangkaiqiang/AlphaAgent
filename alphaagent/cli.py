@@ -9,7 +9,8 @@ import click
 
 from alphaagent.agent.base import Agent, NullAgent
 from alphaagent.backtest.engine import BacktestEngine
-from alphaagent.config import AgentConfig, AppConfig, load_config
+from alphaagent.calendar.ashare import AShareCalendar
+from alphaagent.config import AgentConfig, AppConfig, CalendarConfig, load_config
 from alphaagent.core.event_bus import EventBus
 from alphaagent.data.base import DataFeed, DataSource
 from alphaagent.data.cache import CachedDataSource
@@ -61,6 +62,12 @@ def _build_agent(cfg: AgentConfig) -> Agent:
     return NullAgent()
 
 
+def _build_calendar(cfg: CalendarConfig) -> AShareCalendar | None:
+    if not cfg.enabled:
+        return None
+    return AShareCalendar(cache_path=cfg.cache_path)
+
+
 @click.group()
 def main() -> None:
     """AlphaAgent CLI."""
@@ -73,7 +80,8 @@ def backtest(config: Path) -> None:
     cfg = load_config(config)
     source = _build_data_source(cfg)
     frames = {
-        sym: source.get_bars(sym, cfg.data.start, cfg.data.end) for sym in cfg.data.symbols
+        sym: source.get_bars(sym, cfg.data.start, cfg.data.end, freq=cfg.data.freq)
+        for sym in cfg.data.symbols
     }
     feed = DataFeed(frames)
 
@@ -95,15 +103,18 @@ def backtest(config: Path) -> None:
     )
     strategy = _build_strategy(cfg)
     agent = _build_agent(cfg.agent)
+    calendar = _build_calendar(cfg.calendar)
     click.echo(f"Agent: {type(agent).__name__} (enabled={cfg.agent.enabled})")
+    click.echo(f"Calendar: {'on' if calendar else 'off'}  Freq: {cfg.data.freq}")
 
-    engine = BacktestEngine(feed, strategy, portfolio, execution, event_bus)
+    engine = BacktestEngine(feed, strategy, portfolio, execution, event_bus, calendar=calendar)
     result = engine.run()
 
     click.echo(f"Initial: {result.initial_cash:,.2f}")
     click.echo(f"Final:   {result.final_equity:,.2f}")
     click.echo(f"Return:  {result.total_return:.2%}")
     click.echo(f"Fills:   {result.fills}")
+    click.echo(f"Bars:    processed={result.bars_processed} skipped={result.bars_skipped}")
 
 
 if __name__ == "__main__":

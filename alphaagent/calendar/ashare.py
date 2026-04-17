@@ -11,10 +11,18 @@ For offline tests or environments without AkShare, pass an explicit
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
 
 import pandas as pd
+
+# A-share continuous-trading sessions (local exchange time, Asia/Shanghai).
+# Opening call auction (09:15-09:25) and closing call auction (14:57-15:00)
+# are included here for simplicity; tighten if needed.
+MORNING_OPEN = time(9, 30)
+MORNING_CLOSE = time(11, 30)
+AFTERNOON_OPEN = time(13, 0)
+AFTERNOON_CLOSE = time(15, 0)
 
 
 class AShareCalendar:
@@ -74,3 +82,16 @@ class AShareCalendar:
         start_d = self._to_date(start)
         end_d = self._to_date(end)
         return sorted(d for d in self._days if start_d <= d <= end_d)
+
+    @staticmethod
+    def is_session_time(t: time) -> bool:
+        """True iff ``t`` falls inside an A-share continuous-trading session."""
+        return (MORNING_OPEN <= t <= MORNING_CLOSE) or (
+            AFTERNOON_OPEN <= t <= AFTERNOON_CLOSE
+        )
+
+    def is_trading_session(self, dt: datetime) -> bool:
+        """True iff ``dt`` is a trading day AND within a session window."""
+        if not self.is_trading_day(dt):
+            return False
+        return self.is_session_time(dt.time())
