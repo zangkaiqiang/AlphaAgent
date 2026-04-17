@@ -1,0 +1,30 @@
+# AlphaAgent example config
+data:
+  source: csv              # csv | akshare
+  root: ./data             # directory containing <symbol>.csv files
+  symbols:
+    - "600000"
+    - "000001"
+  start: 2023-01-01
+  end: 2023-12-31
+
+strategy:
+  name: ma_cross
+  params:
+    fast: 5
+    slow: 20
+
+portfolio:
+  initial_cash: 1000000
+  target_pct: 0.3          # allocate 30% of equity per BUY signal
+  commission_rate: 0.0003  # 万三
+  min_commission: 5.0
+  stamp_tax_rate: 0.001    # 千一 (卖出)
+
+execution:
+  slippage_bps: 5          # 5 bps one-way slippage
+
+agent:
+  enabled: false           # set true to route decisions through Claude
+  provider: claude
+  model: claude-sonnet-4-6
