@@ -24,8 +24,8 @@ from alphaagent.data.csv_source import CSVDataSource
 from alphaagent.execution.simulated import SimulatedExecutionHandler
 from alphaagent.portfolio.multi import MultiStrategyPortfolio, StrategyAllocation
 from alphaagent.portfolio.portfolio import Portfolio
+from alphaagent.strategy import registry
 from alphaagent.strategy.base import Strategy
-from alphaagent.strategy.ma_cross import MACrossStrategy
 
 PortfolioLike = Portfolio | MultiStrategyPortfolio
 
@@ -59,10 +59,8 @@ def _build_strategy(scfg: StrategyConfig) -> Strategy:
     params = dict(scfg.params)
     if scfg.strategy_id:
         params.setdefault("strategy_id", scfg.strategy_id)
-
-    if scfg.name == "ma_cross":
-        return MACrossStrategy(**params)
-    raise ValueError(f"unknown strategy: {scfg.name}")
+    cls = registry.get(scfg.name)
+    return cls(**params)
 
 
 def _build_strategies_and_portfolio(
@@ -175,6 +173,13 @@ def backtest(config: Path) -> None:
             click.echo(f"Performance (strategy={sid})")
             click.echo("-" * (18 + len(sid)))
             click.echo(perf.format())
+
+
+@main.command(name="list-strategies")
+def list_strategies() -> None:
+    """List all registered strategies."""
+    for name, cls in sorted(registry.BUILTIN_STRATEGIES.items()):
+        click.echo(f"{name:<22}  {cls.__name__}")
 
 
 if __name__ == "__main__":

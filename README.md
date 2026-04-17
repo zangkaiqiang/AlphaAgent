@@ -250,24 +250,70 @@ for sid, perf in result.performance_by_strategy().items():
     print(sid, perf.sharpe, perf.max_drawdown)
 ```
 
+## 内置策略库
+
+查看所有已注册策略:
+
+```bash
+alphaagent list-strategies
+```
+
+| 名称 | 类别 | 核心逻辑 | 典型特征 |
+|---|---|---|---|
+| `ma_cross` | 趋势 | 快慢均线金叉 BUY / 死叉 SELL | 低胜率,高盈亏比 |
+| `rsi_mean_reversion` | 均值回归 | RSI 穿过超卖区上行 BUY / 超买区下行 SELL | 高胜率,低盈亏比 |
+| `bollinger_breakout` | 趋势(突破) | 收盘突破上轨 BUY / 跌破中轨 SELL | 抓强势突破 |
+| `bollinger_reversion` | 均值回归 | 收盘跌破下轨 BUY / 涨回中轨 SELL | 抄底反弹 |
+| `xs_momentum` | 截面动量(选股) | 按过去 N 天收益排序,持有前 K 名,定期轮动 | 相对强弱选股 |
+
+每个策略都支持自定义参数,在 YAML `strategy.params` 下指定,例如:
+
+```yaml
+strategy:
+  name: rsi_mean_reversion
+  params: { period: 14, oversold: 30, overbought: 70 }
+
+# 或者
+strategy:
+  name: xs_momentum
+  params: { lookback: 60, top_n: 3, rebalance_days: 20 }
+```
+
+### 真正的多元化:组合对立思路
+
+趋势与均值回归的胜率/盈亏比模式**相反** — 把两者并联往往比单策略更稳:
+
+```yaml
+strategies:
+  - name: ma_cross          # 趋势:抓大波段
+    params: { fast: 5, slow: 20 }
+    capital_weight: 0.5
+    strategy_id: trend
+
+  - name: rsi_mean_reversion  # 均值回归:抄短期超跌
+    params: { period: 14, oversold: 30, overbought: 70 }
+    capital_weight: 0.5
+    strategy_id: mean_rev
+```
+
 ## 编写自定义策略
 
 在 `strategies/` 下新建文件,继承 `Strategy`:
 
 ```python
-from alphaagent.strategy import Strategy
+from alphaagent.strategy import Strategy, register
 from alphaagent.core.types import Bar, Side
 
 class MyStrategy(Strategy):
     strategy_id = "my_strategy"
 
     def on_bar(self, bar: Bar) -> None:
-        # 访问 self.ctx.positions、self.ctx.cash
-        # 触发信号:
+        # 访问 self.ctx.positions / self.ctx.cash
+        # 发信号:
         self.ctx.emit_signal(bar, Side.BUY, strength=1.0)
-```
 
-把策略名注册到 `alphaagent/cli.py::_build_strategy`(后续会做成自动发现)。
+register("my_strategy", MyStrategy)  # 注册后 YAML 可直接用 name: my_strategy
+```
 
 ## 架构分层
 
@@ -302,6 +348,7 @@ ruff check alphaagent tests
 - [x] 日/分钟频 + 交易日历过滤
 - [x] 13 项性能指标
 - [x] 多策略组合 + 独立子账户 + 每策略归因
+- [x] 策略库:MA Cross / RSI / Bollinger × 2 / 截面动量
 - [ ] 组合级风控(总敞口、相关性限制)
 - [ ] 实盘券商对接(QMT / XTP)
 - [ ] 分红/送股除权事件流
