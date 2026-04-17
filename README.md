@@ -6,6 +6,7 @@
 
 - **事件驱动架构**:Market → Signal → Order → Fill 四类事件驱动,回测与实盘共用同一套逻辑
 - **A 股规则内置**:T+1、最小 100 股、涨跌停、印花税 + 佣金
+- **组合级风控**:总敞口、单股敞口、持仓只数上限,自动降档或拒单
 - **多数据源**:AkShare / Tushare / 本地 CSV,内建 Parquet 缓存
 - **日/分钟频**:`1d`、`1m`、`5m`、`15m`、`30m`、`60m`
 - **交易日历**:SSE 日历 + 会话窗口(09:30-11:30、13:00-15:00),自动过滤非交易时段
@@ -296,6 +297,55 @@ strategies:
     strategy_id: mean_rev
 ```
 
+## 组合级风控
+
+策略级规则(T+1、涨跌停、最小手数)已经嵌在引擎里。**组合级**规则用来限制整个账户的风险敞口,在订单提交给执行层**之前**检查,可以**降档**(允许但减少数量)或**拒单**(数量归零)。
+
+可用规则(YAML 里哪个字段没填就禁用哪个):
+
+```yaml
+risk:
+  max_gross_exposure: 0.8         # 总持仓市值 ≤ 80% 总资产(留 20% 现金缓冲)
+  max_per_symbol_exposure: 0.3    # 单只股票 ≤ 30% 总资产
+  max_position_count: 10          # 最多同时持有 10 只股票
+```
+
+| 规则 | 作用 | 触发后 |
+|---|---|---|
+| `max_gross_exposure` | 总仓位 / 总资产 ≤ X | 按可用额度**降档**下单数量 |
+| `max_per_symbol_exposure` | 单股仓位 / 总资产 ≤ X | 按单股可用额度**降档** |
+| `max_position_count` | 同时持仓的股票数 ≤ N | 已满时开新股票**拒单**(加仓现有仓位不受限) |
+
+**仅限制 BUY**:SELL 一律放行(减仓永远不增加敞口)。多规则取**最小值**,并向下取整到 100 股倍数。
+
+CLI 运行时会打印 `downsized` 和 `rejected` 计数,一眼看出哪些规则在生效:
+
+```
+Risk rules: ['max_gross_exposure', 'max_per_symbol_exposure']
+Fills:   6
+Risk:    downsized=3 rejected=0
+```
+
+**多策略模式下**,风控看的是**全部子账户合计**的敞口 — 两个策略同时买入同一只股票会触发单股上限,而不是每个子账户单独计算。
+
+编程 API:
+
+```python
+from alphaagent.risk import (
+    PortfolioRiskManager, MaxGrossExposure, MaxPerSymbolExposure, MaxPositionCount,
+)
+
+risk = PortfolioRiskManager(
+    portfolio,
+    rules=[
+        MaxGrossExposure(max_pct=0.8),
+        MaxPerSymbolExposure(max_pct=0.3),
+        MaxPositionCount(max_n=10),
+    ],
+)
+engine = BacktestEngine(feed, strategy, portfolio, execution, bus, risk_manager=risk)
+```
+
 ## 编写自定义策略
 
 在 `strategies/` 下新建文件,继承 `Strategy`:
@@ -349,7 +399,8 @@ ruff check alphaagent tests
 - [x] 13 项性能指标
 - [x] 多策略组合 + 独立子账户 + 每策略归因
 - [x] 策略库:MA Cross / RSI / Bollinger × 2 / 截面动量
-- [ ] 组合级风控(总敞口、相关性限制)
+- [x] 组合级风控(总敞口、单股敞口、持仓只数)
+- [ ] 相关性/板块集中度限制
 - [ ] 实盘券商对接(QMT / XTP)
 - [ ] 分红/送股除权事件流
 - [ ] LLM Agent 决策链路接入

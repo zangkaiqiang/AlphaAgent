@@ -14,6 +14,7 @@ from alphaagent.config import (
     AgentConfig,
     AppConfig,
     CalendarConfig,
+    RiskConfig,
     StrategyConfig,
     load_config,
 )
@@ -24,6 +25,13 @@ from alphaagent.data.csv_source import CSVDataSource
 from alphaagent.execution.simulated import SimulatedExecutionHandler
 from alphaagent.portfolio.multi import MultiStrategyPortfolio, StrategyAllocation
 from alphaagent.portfolio.portfolio import Portfolio
+from alphaagent.risk.portfolio_risk import (
+    MaxGrossExposure,
+    MaxPerSymbolExposure,
+    MaxPositionCount,
+    PortfolioRiskManager,
+    RiskRule,
+)
 from alphaagent.strategy import registry
 from alphaagent.strategy.base import Strategy
 
@@ -115,6 +123,21 @@ def _build_calendar(cfg: CalendarConfig) -> AShareCalendar | None:
     return AShareCalendar(cache_path=cfg.cache_path)
 
 
+def _build_risk_manager(
+    cfg: RiskConfig, portfolio: PortfolioLike
+) -> PortfolioRiskManager | None:
+    rules: list[RiskRule] = []
+    if cfg.max_gross_exposure is not None:
+        rules.append(MaxGrossExposure(cfg.max_gross_exposure))
+    if cfg.max_per_symbol_exposure is not None:
+        rules.append(MaxPerSymbolExposure(cfg.max_per_symbol_exposure))
+    if cfg.max_position_count is not None:
+        rules.append(MaxPositionCount(cfg.max_position_count))
+    if not rules:
+        return None
+    return PortfolioRiskManager(portfolio, rules)
+
+
 @click.group()
 def main() -> None:
     """AlphaAgent CLI."""
@@ -143,10 +166,13 @@ def backtest(config: Path) -> None:
     )
     agent = _build_agent(cfg.agent)
     calendar = _build_calendar(cfg.calendar)
+    risk_manager = _build_risk_manager(cfg.risk, portfolio)
 
     click.echo(f"Agent: {type(agent).__name__} (enabled={cfg.agent.enabled})")
     click.echo(f"Calendar: {'on' if calendar else 'off'}  Freq: {cfg.data.freq}")
     click.echo(f"Strategies: {[s.strategy_id for s in strategies]}")
+    if risk_manager is not None:
+        click.echo(f"Risk rules: {[r.name for r in risk_manager.rules]}")
 
     engine = BacktestEngine(
         feed,
@@ -155,6 +181,7 @@ def backtest(config: Path) -> None:
         execution,
         event_bus,
         calendar=calendar,
+        risk_manager=risk_manager,
     )
     result = engine.run()
 
@@ -162,6 +189,10 @@ def backtest(config: Path) -> None:
     click.echo(f"Final:   {result.final_equity:,.2f}")
     click.echo(f"Bars:    processed={result.bars_processed} skipped={result.bars_skipped}")
     click.echo(f"Fills:   {result.fill_count}")
+    if risk_manager is not None:
+        click.echo(
+            f"Risk:    downsized={risk_manager.downsizes} rejected={risk_manager.rejections}"
+        )
     click.echo("")
     click.echo("Performance (aggregate)")
     click.echo("-----------------------")

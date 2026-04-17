@@ -105,7 +105,7 @@ class Portfolio:
 
         if signal.side == Side.BUY:
             target_value = self.equity() * self.target_pct * signal.strength
-            current_value = self._position_value(signal.symbol)
+            current_value = self.position_value(signal.symbol)
             to_buy_value = target_value - current_value
             if to_buy_value <= 0:
                 return None
@@ -142,18 +142,26 @@ class Portfolio:
             strategy_id=self.strategy_id or signal.strategy_id,
         )
 
-    # ---- valuation ------------------------------------------------------
+    # ---- valuation / portfolio view ------------------------------------
 
-    def _position_value(self, symbol: str) -> float:
+    def position_value(self, symbol: str) -> float:
         pos = self.positions.get(symbol)
         if pos is None:
             return 0.0
         price = self._last_price.get(symbol, pos.avg_cost)
         return pos.quantity * price
 
+    def gross_value(self) -> float:
+        return sum(self.position_value(s) for s in self.positions)
+
     def equity(self) -> float:
-        positions_value = sum(self._position_value(s) for s in self.positions)
-        return self.cash + positions_value
+        return self.cash + self.gross_value()
+
+    def held_symbols(self) -> set[str]:
+        return {s for s, p in self.positions.items() if p.quantity > 0}
+
+    def last_price(self, symbol: str) -> float | None:
+        return self._last_price.get(symbol)
 
     def snapshot_positions(self) -> dict[str, int]:
         return {s: p.quantity for s, p in self.positions.items() if p.quantity > 0}

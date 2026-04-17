@@ -90,7 +90,7 @@ class MultiStrategyPortfolio:
             return
         pf.handle_fill(event)
 
-    # ---- aggregation ---------------------------------------------------
+    # ---- aggregation / portfolio view ----------------------------------
 
     def equity(self) -> float:
         return sum(pf.equity() for pf in self.portfolios.values())
@@ -98,6 +98,25 @@ class MultiStrategyPortfolio:
     @property
     def cash(self) -> float:
         return sum(pf.cash for pf in self.portfolios.values())
+
+    def position_value(self, symbol: str) -> float:
+        return sum(pf.position_value(symbol) for pf in self.portfolios.values())
+
+    def gross_value(self) -> float:
+        return sum(pf.gross_value() for pf in self.portfolios.values())
+
+    def held_symbols(self) -> set[str]:
+        out: set[str] = set()
+        for pf in self.portfolios.values():
+            out |= pf.held_symbols()
+        return out
+
+    def last_price(self, symbol: str) -> float | None:
+        for pf in self.portfolios.values():
+            p = pf.last_price(symbol)
+            if p is not None:
+                return p
+        return None
 
     def snapshot_positions(self) -> dict[str, dict[str, int]]:
         """Per-strategy position snapshots."""

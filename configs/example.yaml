@@ -16,6 +16,11 @@ calendar:
   enabled: false           # set true to filter non-trading days / sessions
   cache_path: ./data/cache/ashare_calendar.parquet
 
+risk:                      # portfolio-level limits (optional; omit fields to disable)
+  # max_gross_exposure: 0.8         # total positions <= 80% equity
+  # max_per_symbol_exposure: 0.3    # any single symbol <= 30% equity
+  # max_position_count: 10          # hold <= 10 symbols simultaneously
+
 strategy:
   name: ma_cross
   params:

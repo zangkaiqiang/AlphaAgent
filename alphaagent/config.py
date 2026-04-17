@@ -48,6 +48,14 @@ class ExecutionConfig(BaseModel):
     slippage_bps: float = 0.0
 
 
+class RiskConfig(BaseModel):
+    """Portfolio-level risk limits. Any unset field is disabled."""
+
+    max_gross_exposure: float | None = None  # e.g. 0.8 => cap at 80% of equity
+    max_per_symbol_exposure: float | None = None  # e.g. 0.3 => any single symbol ≤ 30%
+    max_position_count: int | None = None  # max distinct symbols held at once
+
+
 class AgentConfig(BaseModel):
     enabled: bool = False
     provider: str = "claude"  # claude | null
@@ -64,6 +72,7 @@ class AppConfig(BaseModel):
     execution: ExecutionConfig = ExecutionConfig()
     agent: AgentConfig = AgentConfig()
     calendar: CalendarConfig = CalendarConfig()
+    risk: RiskConfig = RiskConfig()
 
     @model_validator(mode="after")
     def _normalize_strategies(self):

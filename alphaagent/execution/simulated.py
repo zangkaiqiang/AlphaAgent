@@ -38,6 +38,8 @@ class SimulatedExecutionHandler(ExecutionHandler):
         self._last_price[event.bar.symbol] = event.bar.close
 
     def handle_order(self, event: OrderEvent) -> None:
+        if event.quantity <= 0:
+            return  # rejected or downsized to zero by a risk rule
         price = self._last_price.get(event.symbol)
         if price is None:
             return  # no price observed yet; drop silently

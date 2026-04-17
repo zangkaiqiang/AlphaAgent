@@ -16,6 +16,7 @@ from alphaagent.execution.simulated import SimulatedExecutionHandler
 from alphaagent.metrics.summary import PerformanceSummary, summarize
 from alphaagent.portfolio.multi import MultiStrategyPortfolio
 from alphaagent.portfolio.portfolio import Portfolio
+from alphaagent.risk.portfolio_risk import PortfolioRiskManager
 from alphaagent.strategy.base import Strategy, StrategyContext
 
 PortfolioLike = Portfolio | MultiStrategyPortfolio
@@ -86,6 +87,7 @@ class BacktestEngine:
         execution: SimulatedExecutionHandler,
         event_bus: EventBus,
         calendar: AShareCalendar | None = None,
+        risk_manager: PortfolioRiskManager | None = None,
     ):
         """Wires the event-driven engine.
 
@@ -106,6 +108,7 @@ class BacktestEngine:
         self.execution = execution
         self.event_bus = event_bus
         self.calendar = calendar
+        self.risk_manager = risk_manager
         self._fills: list[FillEvent] = []
         self._bars_processed = 0
         self._bars_skipped = 0
@@ -124,6 +127,10 @@ class BacktestEngine:
         for strategy in self.strategies:
             event_bus.subscribe(EventType.MARKET, strategy.handle_market)
         event_bus.subscribe(EventType.SIGNAL, self.portfolio.handle_signal)
+        # Risk manager must see ORDER events BEFORE execution so that any
+        # downsize or rejection is applied before the fill is generated.
+        if self.risk_manager is not None:
+            event_bus.subscribe(EventType.ORDER, self.risk_manager.handle_order)
         event_bus.subscribe(EventType.ORDER, self.execution.handle_order)
         event_bus.subscribe(EventType.FILL, self.portfolio.handle_fill)
         event_bus.subscribe(EventType.FILL, self._record_fill)
