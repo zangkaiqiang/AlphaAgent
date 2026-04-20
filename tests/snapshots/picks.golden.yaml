@@ -1,0 +1,124 @@
+metadata:
+  generated_at: '2024-04-20'
+  resolved_as_of: '2024-04-20'
+  universe: static
+  universe_size: 5
+  filtered_size: 5
+  rules:
+  - above_ma (weight=0.30)
+  - volume_breakout (weight=0.20)
+  - momentum (weight=0.30)
+  - low_volatility (weight=0.20)
+  universe_snapshot:
+  - UPUP
+  - DOWN
+  - FLAT
+  - OSCI
+  - VOLS
+symbols:
+- UPUP
+- VOLS
+- FLAT
+- DOWN
+- OSCI
+candidates:
+- symbol: UPUP
+  name: Upward
+  final_score: 0.9375
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 43.0
+      ma20: 40.15
+  - rule: momentum
+    score: 1.0
+    detail:
+      return_60d: 0.6996
+  - rule: low_volatility
+    score: 0.75
+    detail:
+      vol_20d: 0.00033
+  metadata:
+    industry: 科技
+    list_date: '2010-01-01'
+- symbol: VOLS
+  name: Volatile
+  final_score: 0.7187
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 33.0
+      ma20: 29.775
+  - rule: momentum
+    score: 0.75
+    detail:
+      return_60d: 0.1579
+  - rule: low_volatility
+    score: 0.25
+    detail:
+      vol_20d: 0.11181
+  metadata:
+    industry: 材料
+    list_date: '2010-01-01'
+- symbol: FLAT
+  name: Flatland
+  final_score: 0.4375
+  reasons:
+  - rule: above_ma
+    score: 0.0
+    detail:
+      close: 25.0
+      ma20: 25.0
+  - rule: momentum
+    score: 0.5
+    detail:
+      return_60d: 0.0
+  - rule: low_volatility
+    score: 1.0
+    detail:
+      vol_20d: 0.0
+  metadata:
+    industry: 公用
+    list_date: '2010-01-01'
+- symbol: DOWN
+  name: Downward
+  final_score: 0.125
+  reasons:
+  - rule: above_ma
+    score: 0.0
+    detail:
+      close: 17.0
+      ma20: 19.85
+  - rule: momentum
+    score: 0.0
+    detail:
+      return_60d: -0.5101
+  - rule: low_volatility
+    score: 0.5
+    detail:
+      vol_20d: 0.0013
+  metadata:
+    industry: 科技
+    list_date: '2010-01-01'
+- symbol: OSCI
+  name: Oscillator
+  final_score: 0.0937
+  reasons:
+  - rule: above_ma
+    score: 0.0
+    detail:
+      close: 16.0
+      ma20: 20.0
+  - rule: momentum
+    score: 0.25
+    detail:
+      return_60d: -0.1111
+  - rule: low_volatility
+    score: 0.0
+    detail:
+      vol_20d: 0.1764
+  metadata:
+    industry: 材料
+    list_date: '2010-01-01'

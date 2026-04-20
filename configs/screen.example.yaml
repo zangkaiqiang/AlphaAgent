@@ -1,0 +1,65 @@
+# Stock screener config — independent of backtest config.
+# Workflow: alphaagent screen → human review → paste symbols into strategy.yaml.
+
+universe:
+  source: akshare_index        # static | akshare_index | tushare_index
+  index_code: "000300"         # CSI 300. Other codes: 000016 (SSE 50), 000905 (CSI 500), 000852 (CSI 1000)
+  # static example:
+  # source: static
+  # symbols: ["600000", "000001"]
+
+# Reuses alphaagent.config.DataConfig — symbols/start/end are derived
+# from universe + as_of + lookback_days, so leave them unset.
+data:
+  source: akshare              # akshare | tushare | csv
+  freq: 1d
+  adjust: qfq
+  cache_dir: ./data/cache
+
+as_of: 2024-12-31              # selection "today"; auto-snapped to nearest prior trading day
+lookback_days: 120             # >= max rule lookback + buffer
+calendar_enabled: true         # use AShareCalendar for as_of normalization
+
+meta:
+  source: akshare              # akshare | tushare | csv
+  cache_dir: ./data/cache/meta # daily TTL JSON cache
+  # csv: ./data/meta.csv       # used when source: csv
+
+# Hard filters: drop symbols before scoring.
+filters:
+  - type: min_price
+    min_price: 3.0
+  - type: max_price
+    max_price: 500.0
+  - type: min_avg_volume
+    lookback: 20
+    min_amount: 10000000       # 1e7 CNY (10M)
+  - type: exclude_st
+  - type: min_listed_days
+    min_days: 250
+
+# Scoring rules. Weights auto-normalize; missing rules drop from denominator.
+rules:
+  - type: momentum             # cross-sectional
+    lookback: 60
+    weight: 0.4
+  - type: above_ma             # absolute
+    period: 60
+    weight: 0.2
+  - type: low_volatility       # cross-sectional
+    lookback: 20
+    weight: 0.2
+  - type: volume_breakout      # absolute
+    lookback: 20
+    z_threshold: 1.5
+    weight: 0.2
+
+execution:
+  max_workers: 16              # concurrent fetch threads
+  show_progress: true          # tqdm
+
+output:
+  path: ./picks.yaml
+  top_n: 30
+  with_reasons: full           # full | compact | none
+  format: yaml                 # yaml | csv

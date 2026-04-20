@@ -83,6 +83,17 @@ class AppConfig(BaseModel):
     calendar: CalendarConfig = CalendarConfig()
     risk: RiskConfig = RiskConfig()
 
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_empty_sections(cls, data):
+        # YAML keys like `risk:` with all fields commented out parse to None.
+        # Treat that as "use defaults" instead of erroring out.
+        if isinstance(data, dict):
+            for key in ("portfolio", "execution", "agent", "calendar", "risk"):
+                if data.get(key) is None and key in data:
+                    data[key] = {}
+        return data
+
     @model_validator(mode="after")
     def _normalize_strategies(self):
         if self.strategies and self.strategy is not None:

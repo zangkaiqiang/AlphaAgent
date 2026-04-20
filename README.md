@@ -15,6 +15,7 @@
 - **多策略组合**:并行运行多个策略,独立子账户,按权重分配资金,含每策略 PnL 归因
 - **Agent 层可开关**:通过配置启用 LLM 选股/调参,默认关闭
 - **券商对接**:`simulated` 回测 / `paper` 模拟实盘(次 bar 开盘成交)/ `qmt` 真实盘(miniQMT)
+- **选股工作流**:独立 CLI(`alphaagent screen`),指数成分股 + 6 条技术规则 → 候选清单 yaml → 人工审核 → 喂回测
 - **自动化调度**:APScheduler 驱动的定时任务
 
 ## 目录结构
@@ -419,6 +420,91 @@ risk = PortfolioRiskManager(
 )
 engine = BacktestEngine(feed, strategy, portfolio, execution, bus, risk_manager=risk)
 ```
+
+## 选股工作流
+
+选股跟回测**完全解耦** — 离线产出候选清单 yaml,人工审核后把 symbols 复制到 `strategy.yaml` 跑回测。详细设计见 [docs/screener-design.md](docs/screener-design.md)。
+
+```bash
+alphaagent screen --config configs/screen.example.yaml -o picks.yaml
+alphaagent list-screen-rules               # 看所有内置规则和过滤器
+alphaagent screen -c ... --dry-run         # 校验配置不拉数据
+alphaagent screen -c ... --replay picks.yaml -o picks_v2.yaml   # 用快照重跑
+```
+
+[configs/screen.example.yaml](configs/screen.example.yaml) 的核心配置:
+
+```yaml
+universe:
+  source: akshare_index        # 当前成分股(免费,有幸存者偏差)
+  index_code: "000300"         # 沪深 300
+
+as_of: 2024-12-31              # 选股的"今天",非交易日自动规整到前一交易日
+lookback_days: 120             # 算因子的回看窗口
+
+filters:                       # 硬过滤
+  - { type: min_price, min_price: 3.0 }
+  - { type: min_avg_volume, lookback: 20, min_amount: 10000000 }
+  - { type: exclude_st }
+  - { type: min_listed_days, min_days: 250 }
+
+rules:                         # 打分规则,权重自动归一化
+  - { type: momentum, lookback: 60, weight: 0.4 }       # 横截面
+  - { type: above_ma, period: 60, weight: 0.2 }         # 绝对
+  - { type: low_volatility, lookback: 20, weight: 0.2 } # 横截面
+  - { type: volume_breakout, lookback: 20, z_threshold: 1.5, weight: 0.2 }  # 绝对
+```
+
+### 内置规则
+
+**绝对评分(每只股票独立打分)**:`above_ma`、`price_breakout`、`volume_breakout`(后者用成交额 amount,不用 volume,除权天然中性)。
+
+**横截面评分(全池排名归一化)**:`momentum`、`reversal`、`low_volatility`。
+
+权重自动归一化(`0.4+0.2+0.2+0.2` ≡ `4+2+2+2`),数据缺失的规则从分母扣除。
+
+### 输出 picks.yaml
+
+```yaml
+metadata:
+  resolved_as_of: 2024-12-30          # 自动规整后的真实交易日
+  universe: akshare_index:000300
+  universe_size: 300
+  filtered_size: 240
+  universe_snapshot: ["000001", "000002", ...]   # 全部成分股,供 --replay 复现
+symbols:                              # 直接复制到 strategy.yaml 的 data.symbols
+  - "600519"
+  - "000858"
+candidates:                           # 详细评分,供人工审核
+  - symbol: "600519"
+    name: "贵州茅台"
+    final_score: 0.873
+    reasons:
+      - { rule: momentum, score: 0.95, detail: { return_60d: 0.185 } }
+      - { rule: above_ma, score: 1.0, detail: { close: 1620.5, ma60: 1502.3 } }
+```
+
+`output.with_reasons` 三档:`full`(完整理由)/ `compact`(只保留最高分规则)/ `none`(只输出 symbols 列表)。
+`output.format` 支持 `yaml` 和 `csv`(Excel 友好)。
+
+### 人工审核 checklist
+
+复制 `picks.yaml` 的 `symbols` 到 `strategy.yaml` 之前,过一遍:
+
+1. **行业集中度** — 30 只里有 15 只白酒?手动剔除一些
+2. **市值分布** — 是否过度偏向某个风格
+3. **近期公告** — 用同花顺/东财查最近一周公告,剔除有重大利空的
+4. **复权事件** — 临近除权日的股票排除(打分会失真)
+5. **流动性** — 即便过了硬过滤,日均成交额 < 5000 万的也要谨慎
+
+### 已知局限(MVP)
+
+- **幸存者偏差**:`akshare_index` 拉的是**当前**成分股,不是历史。回测结果偏好。
+  → 升级到 Tushare 2000 积分(`tushare_index`,v2)用 `index_weight` 月度快照。
+- **ST 识别靠名称关键字**:漏掉历史摘帽/戴帽。
+  → 升级到 Tushare 3000 积分(`stock_st`,v2)拿精确历史。
+- **基本面规则缺失**:PE/PB/ROE 没接入。
+  → Tushare 2000 积分(`daily_basic`)接入,v2 加 `low_pe`/`low_pb`/`high_roe` 规则。
 
 ## 编写自定义策略
 

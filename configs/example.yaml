@@ -1,7 +1,7 @@
 # AlphaAgent example config
 data:
-  source: csv              # csv | akshare | tushare
-  root: ./data             # for csv: directory of <symbol>.csv files
+  source: akshare          # csv | akshare | tushare
+  # root: ./data           # for csv: directory of <symbol>.csv files
   symbols:
     - "600000"
     - "000001"

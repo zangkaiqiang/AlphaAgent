@@ -285,6 +285,184 @@ def list_strategies() -> None:
         click.echo(f"{name:<22}  {cls.__name__}")
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Screener subcommands
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def _build_universe(cfg):
+    from alphaagent.screener.universe import (
+        AkshareIndexUniverse,
+        StaticUniverse,
+        TushareIndexUniverse,
+    )
+
+    src = cfg.universe.source
+    if src == "static":
+        return StaticUniverse(cfg.universe.symbols, name="static")
+    if src == "akshare_index":
+        return AkshareIndexUniverse(cfg.universe.index_code)
+    if src == "tushare_index":
+        return TushareIndexUniverse(cfg.universe.index_code)
+    raise ValueError(f"unknown universe source: {src!r}")
+
+
+def _build_meta_provider(cfg):
+    from alphaagent.screener.meta import (
+        AkshareMetaProvider,
+        CSVMetaProvider,
+        TushareMetaProvider,
+    )
+
+    src = cfg.meta.source
+    if src == "akshare":
+        return AkshareMetaProvider(cache_dir=cfg.meta.cache_dir)
+    if src == "csv":
+        return CSVMetaProvider(cfg.meta.csv)
+    if src == "tushare":
+        return TushareMetaProvider(cache_dir=cfg.meta.cache_dir)
+    raise ValueError(f"unknown meta source: {src!r}")
+
+
+def _build_screen_data_source(cfg):
+    """Like _build_data_source but wraps the screener's DataConfig."""
+    from alphaagent.data.cache import CachedDataSource
+    from alphaagent.data.csv_source import CSVDataSource
+
+    if cfg.data.source == "csv":
+        if not cfg.data.root:
+            raise ValueError("data.root is required for csv source")
+        source = CSVDataSource(cfg.data.root)
+    elif cfg.data.source == "akshare":
+        from alphaagent.data.akshare_source import AkShareDataSource
+
+        source = AkShareDataSource(adjust=cfg.data.adjust or "qfq")
+    elif cfg.data.source == "tushare":
+        from alphaagent.data.tushare_source import TushareDataSource
+
+        source = TushareDataSource(
+            token=cfg.data.tushare_token, adjust=cfg.data.adjust or "qfq"
+        )
+    else:
+        raise ValueError(f"unknown data source: {cfg.data.source}")
+
+    if cfg.data.cache_dir:
+        source = CachedDataSource(source, cfg.data.cache_dir)
+    return source
+
+
+def _load_replay_snapshot(path: Path) -> list[str]:
+    import yaml as _yaml
+
+    with open(path, encoding="utf-8") as f:
+        data = _yaml.safe_load(f)
+    snapshot = (data.get("metadata") or {}).get("universe_snapshot")
+    if not snapshot:
+        raise ValueError(
+            f"--replay file {path} has no metadata.universe_snapshot"
+        )
+    return [str(s) for s in snapshot]
+
+
+@main.command()
+@click.option("--config", "-c", required=True, type=click.Path(exists=True, path_type=Path))
+@click.option("--output", "-o", type=click.Path(path_type=Path), default=None,
+              help="Override output.path from config.")
+@click.option("--replay", type=click.Path(exists=True, path_type=Path), default=None,
+              help="Replay using universe_snapshot from a previous picks.yaml.")
+@click.option("--dry-run", is_flag=True, help="Validate config without fetching data.")
+def screen(config: Path, output: Path | None, replay: Path | None, dry_run: bool) -> None:
+    """Run a stock screener from a YAML config."""
+    from alphaagent.calendar.ashare import AShareCalendar
+    from alphaagent.screener.config import load_screen_config
+    from alphaagent.screener.filters import build_filter
+    from alphaagent.screener.output import write_picks
+    from alphaagent.screener.pipeline import ScreenerPipeline
+    from alphaagent.screener.rules_builtin import build_rule, split_rules
+
+    cfg = load_screen_config(config)
+    universe = _build_universe(cfg)
+    filters = [build_filter(f.to_kwargs() | {"type": f.type}) for f in cfg.filters]
+    rules = [build_rule(r.to_kwargs()) for r in cfg.rules]
+    abs_rules, xs_rules = split_rules(rules)
+
+    click.echo(f"Universe: {universe.name()}")
+    click.echo(f"as_of: {cfg.as_of}")
+    click.echo(f"Filters: {[f.name for f in filters]}")
+    click.echo(
+        f"Rules: absolute={[r.name for r in abs_rules]} "
+        f"cross-sectional={[r.name for r in xs_rules]}"
+    )
+
+    if dry_run:
+        click.echo("--dry-run: config OK, exiting without fetching data.")
+        return
+
+    data_source = _build_screen_data_source(cfg)
+    meta_provider = _build_meta_provider(cfg)
+    calendar = AShareCalendar() if cfg.calendar_enabled else None
+
+    pipeline = ScreenerPipeline(
+        universe=universe,
+        data_source=data_source,
+        meta_provider=meta_provider,
+        absolute_rules=abs_rules,
+        xs_rules=xs_rules,
+        filters=filters,
+        as_of=cfg.as_of,
+        lookback_days=cfg.lookback_days,
+        calendar=calendar,
+        max_workers=cfg.execution.max_workers,
+        show_progress=cfg.execution.show_progress,
+        freq=cfg.data.freq,
+    )
+
+    replay_symbols = _load_replay_snapshot(replay) if replay else None
+    if replay_symbols:
+        click.echo(f"--replay: using {len(replay_symbols)} symbols from {replay}")
+
+    result = pipeline.run(replay_symbols=replay_symbols)
+
+    click.echo(
+        f"Resolved as_of: {result.resolved_as_of}  "
+        f"universe={result.universe_size}  filtered={result.filtered_size}  "
+        f"picks={len(result.picks)}"
+    )
+    for p in result.top(min(10, cfg.output.top_n)):
+        bits = " ".join(f"{r.rule_name}:{r.score:.2f}" for r in p.reasons)
+        click.echo(f"  {p.symbol}  {p.name or '':<10}  {p.final_score:.3f}   {bits}")
+
+    out_path = output or Path(cfg.output.path)
+    write_picks(
+        result,
+        path=out_path,
+        top_n=cfg.output.top_n,
+        with_reasons=cfg.output.with_reasons,
+        fmt=cfg.output.format,
+    )
+    click.echo(f"Wrote {min(cfg.output.top_n, len(result.picks))} picks to {out_path}")
+
+
+@main.command(name="list-screen-rules")
+def list_screen_rules() -> None:
+    """List all registered screener rules and filters."""
+    from alphaagent.screener.filters import BUILTIN_FILTERS
+    from alphaagent.screener.rules_builtin import (
+        BUILTIN_ABSOLUTE_RULES,
+        BUILTIN_XS_RULES,
+    )
+
+    click.echo("Absolute rules:")
+    for name, cls in sorted(BUILTIN_ABSOLUTE_RULES.items()):
+        click.echo(f"  {name:<20}  {cls.__name__}")
+    click.echo("Cross-sectional rules:")
+    for name, cls in sorted(BUILTIN_XS_RULES.items()):
+        click.echo(f"  {name:<20}  {cls.__name__}")
+    click.echo("Hard filters:")
+    for name, cls in sorted(BUILTIN_FILTERS.items()):
+        click.echo(f"  {name:<20}  {cls.__name__}")
+
+
 if __name__ == "__main__":
     main(prog_name="alphaagent", standalone_mode=True)
     sys.exit(0)
