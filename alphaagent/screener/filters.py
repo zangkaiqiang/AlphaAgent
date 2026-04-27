@@ -84,21 +84,47 @@ class ExcludeST(HardFilter):
 
 
 class MinListedDays(HardFilter):
-    """Drop symbols listed for fewer than ``min_days`` calendar days."""
+    """Drop symbols listed for fewer than ``min_days`` calendar days.
+
+    When ``meta.list_date`` is missing (meta provider degraded), default
+    behavior is to drop — the filter's purpose is to exclude new listings,
+    so failing-open would silently admit exactly what we want to keep out.
+    Set ``drop_on_missing=False`` only when you explicitly accept that
+    risk.
+    """
 
     name = "min_listed_days"
 
-    def __init__(self, min_days: int = 250):
+    def __init__(self, min_days: int = 250, drop_on_missing: bool = True):
         if min_days < 0:
             raise ValueError("min_days must be >= 0")
         self.min_days = min_days
+        self.drop_on_missing = drop_on_missing
 
     def keep(self, symbol: str, bars: pd.DataFrame, meta: StockMeta) -> bool:
         if meta.list_date is None:
-            # Unknown listing date — be permissive (don't drop).
-            return True
+            return not self.drop_on_missing
         as_of = bars.index[-1].date() if len(bars) else date.today()
         return (as_of - meta.list_date).days >= self.min_days
+
+
+class MinBarCount(HardFilter):
+    """Require at least ``min_bars`` rows in the fetched window.
+
+    A stock with far fewer bars than expected was suspended, halted, or
+    had data gaps for much of the lookback — excluding it prevents noisy
+    bars from dominating relative ranks.
+    """
+
+    name = "min_bar_count"
+
+    def __init__(self, min_bars: int):
+        if min_bars < 1:
+            raise ValueError("min_bars must be >= 1")
+        self.min_bars = min_bars
+
+    def keep(self, symbol: str, bars: pd.DataFrame, meta: StockMeta) -> bool:
+        return len(bars) >= self.min_bars
 
 
 BUILTIN_FILTERS: dict[str, type[HardFilter]] = {
@@ -107,6 +133,7 @@ BUILTIN_FILTERS: dict[str, type[HardFilter]] = {
     "min_avg_volume": MinAvgVolume,
     "exclude_st": ExcludeST,
     "min_listed_days": MinListedDays,
+    "min_bar_count": MinBarCount,
 }
 
 

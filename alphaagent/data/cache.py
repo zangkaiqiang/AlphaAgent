@@ -1,10 +1,15 @@
 """Local Parquet cache that wraps any DataSource.
 
 Strategy:
-- One parquet file per (symbol, freq) at ``<root>/<symbol>_<freq>.parquet``.
+- One parquet file per (symbol, freq, source_id) at
+  ``<root>/<symbol>_<freq>__<source_id>.parquet``.
 - On request, read cached frame; if it covers [start, end], return the slice.
 - Otherwise, fetch missing ranges (before and/or after the cached range)
   from the upstream source, merge, persist, and return the requested slice.
+
+``source_id`` is part of the cache key so switching between upstreams
+(e.g. akshare sina ↔ eastmoney) never mixes rows with different adjust /
+amount semantics into the same file.
 
 This keeps network calls to a minimum without requiring DuckDB.
 """
@@ -20,13 +25,16 @@ from alphaagent.data.base import DataSource
 
 
 class CachedDataSource(DataSource):
-    def __init__(self, upstream: DataSource, root: str | Path):
+    def __init__(self, upstream: DataSource, root: str | Path, source_id: str):
+        if not source_id:
+            raise ValueError("source_id is required to partition cache files")
         self.upstream = upstream
         self.root = Path(root)
+        self.source_id = source_id
         self.root.mkdir(parents=True, exist_ok=True)
 
     def _path(self, symbol: str, freq: str) -> Path:
-        return self.root / f"{symbol}_{freq}.parquet"
+        return self.root / f"{symbol}_{freq}__{self.source_id}.parquet"
 
     def _read_cache(self, symbol: str, freq: str) -> pd.DataFrame | None:
         path = self._path(symbol, freq)

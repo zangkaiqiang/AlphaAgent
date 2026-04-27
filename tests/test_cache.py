@@ -29,7 +29,7 @@ class StubSource(DataSource):
 
 def test_cache_returns_slice_without_second_fetch(tmp_path):
     stub = StubSource()
-    cache = CachedDataSource(stub, tmp_path)
+    cache = CachedDataSource(stub, tmp_path, source_id="stub")
 
     first = cache.get_bars("600000", date(2023, 1, 3), date(2023, 3, 31))
     assert not first.empty
@@ -43,7 +43,7 @@ def test_cache_returns_slice_without_second_fetch(tmp_path):
 
 def test_cache_extends_range_on_demand(tmp_path):
     stub = StubSource()
-    cache = CachedDataSource(stub, tmp_path)
+    cache = CachedDataSource(stub, tmp_path, source_id="stub")
 
     cache.get_bars("600000", date(2023, 2, 1), date(2023, 2, 28))
     assert len(stub.calls) == 1

@@ -13,7 +13,12 @@ from alphaagent.data.csv_source import CSVDataSource
 from alphaagent.screener.base import Reason
 from alphaagent.screener.filters import MinPrice
 from alphaagent.screener.meta import CSVMetaProvider
-from alphaagent.screener.pipeline import ScreenerPipeline, _weighted_normalize
+from alphaagent.screener.base import Pick
+from alphaagent.screener.pipeline import (
+    ScreenerPipeline,
+    _apply_industry_cap,
+    _weighted_normalize,
+)
 from alphaagent.screener.rules_builtin import AboveMA, Momentum
 from alphaagent.screener.universe import StaticUniverse
 
@@ -69,12 +74,53 @@ def test_weighted_normalize_uses_only_present_rules():
     assert _weighted_normalize(reasons, weights) == pytest.approx(0.4)
 
 
-def test_weighted_normalize_drops_missing_from_denominator():
+def test_weighted_normalize_penalizes_missing_rules():
     # Only rule 'a' fired (weight=0.4); 'b' (weight=0.6) is missing.
-    # Result should be 1.0, not 0.4 (no penalty for missing).
+    # Fixed denominator: 0.4*1.0 / (0.4 + 0.6) = 0.4. A symbol that hits
+    # all rules with average 0.9 now correctly outranks this.
     reasons = [Reason("a", 1.0)]
     weights = {"a": 0.4, "b": 0.6}
-    assert _weighted_normalize(reasons, weights) == pytest.approx(1.0)
+    assert _weighted_normalize(reasons, weights) == pytest.approx(0.4)
+
+
+def test_weighted_normalize_full_coverage_unchanged():
+    # When all rules fired, behavior matches the old weighted average.
+    reasons = [Reason("a", 1.0), Reason("b", 0.5)]
+    weights = {"a": 0.4, "b": 0.6}
+    assert _weighted_normalize(reasons, weights) == pytest.approx(0.7)
+
+
+def _pick(sym: str, score: float, industry: str | None) -> Pick:
+    return Pick(
+        symbol=sym,
+        name=sym,
+        final_score=score,
+        metadata={"industry": industry},
+    )
+
+
+def test_industry_cap_keeps_top_per_industry():
+    picks = [
+        _pick("BANK1", 0.9, "银行"),
+        _pick("BANK2", 0.8, "银行"),
+        _pick("BANK3", 0.7, "银行"),
+        _pick("TECH1", 0.6, "科技"),
+        _pick("TECH2", 0.5, "科技"),
+    ]
+    capped = _apply_industry_cap(picks, max_per_industry=2)
+    # Drops BANK3 (third bank) but keeps TECH2 (second tech).
+    assert [p.symbol for p in capped] == ["BANK1", "BANK2", "TECH1", "TECH2"]
+
+
+def test_industry_cap_unknown_industries_share_bucket():
+    picks = [
+        _pick("A", 0.9, None),
+        _pick("B", 0.8, None),
+        _pick("C", 0.7, None),
+    ]
+    capped = _apply_industry_cap(picks, max_per_industry=1)
+    # All three share the "(unknown)" bucket — only the top one survives.
+    assert [p.symbol for p in capped] == ["A"]
 
 
 def test_weighted_normalize_empty_returns_zero():

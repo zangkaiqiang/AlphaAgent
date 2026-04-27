@@ -70,9 +70,10 @@ def test_percentile_rank_empty():
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-def test_above_ma_score_1_when_price_above():
+def test_above_ma_score_1_when_well_above():
+    # close = 20, ma5 = 12 → excess ≈ 0.67, scale 0.10 → clipped to 1.0
     rule = AboveMA(period=5)
-    bars = _bars([10, 10, 10, 10, 10, 20])  # ma5 = 12, close = 20 > 12
+    bars = _bars([10, 10, 10, 10, 10, 20])
     r = rule.evaluate(bars)
     assert r is not None and r.score == 1.0
 
@@ -82,6 +83,19 @@ def test_above_ma_score_0_when_below():
     bars = _bars([10, 10, 10, 10, 10, 5])  # ma5 = 9, close = 5 < 9
     r = rule.evaluate(bars)
     assert r is not None and r.score == 0.0
+
+
+def test_above_ma_score_interior_is_continuous():
+    # MA over the last 5 = mean([10,10,10,10,10.5]) = 10.1.
+    # excess = 10.5/10.1 - 1 ≈ 0.0396; score = 0.0396/0.10 ≈ 0.396.
+    # The important assertion is that the score is strictly interior —
+    # old 0/1 scoring would have given 1.0 here.
+    rule = AboveMA(period=5, score_scale=0.10)
+    bars = _bars([10, 10, 10, 10, 10, 10.5])
+    r = rule.evaluate(bars)
+    assert r is not None
+    assert 0.0 < r.score < 1.0
+    assert r.score == pytest.approx(0.396, rel=1e-2)
 
 
 def test_above_ma_returns_none_when_too_few_bars():
@@ -99,11 +113,12 @@ def test_above_ma_rejects_bad_period():
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-def test_price_breakout_hits_when_strict_new_high():
-    rule = PriceBreakout(lookback=5)
-    bars = _bars([10, 11, 12, 13, 14, 15])  # close 15 > prior max 14
+def test_price_breakout_hits_when_well_above_prior_high():
+    # prior max = 14, close = 15 → excess ≈ 0.071, scale 0.10 → 0.71
+    rule = PriceBreakout(lookback=5, score_scale=0.10)
+    bars = _bars([10, 11, 12, 13, 14, 15])
     r = rule.evaluate(bars)
-    assert r is not None and r.score == 1.0
+    assert r is not None and r.score == pytest.approx(1 / 14 / 0.10, rel=1e-3)
 
 
 def test_price_breakout_misses_when_equal():
@@ -111,6 +126,14 @@ def test_price_breakout_misses_when_equal():
     bars = _bars([10, 11, 12, 13, 14, 14])  # close 14 == prior max 14
     r = rule.evaluate(bars)
     assert r is not None and r.score == 0.0
+
+
+def test_price_breakout_clips_at_large_excess():
+    # close = 20 vs prior max 10 → excess 1.0, scale 0.10 → clipped to 1.0
+    rule = PriceBreakout(lookback=5, score_scale=0.10)
+    bars = _bars([10, 10, 10, 10, 10, 20])
+    r = rule.evaluate(bars)
+    assert r is not None and r.score == 1.0
 
 
 def test_price_breakout_returns_none_when_short():

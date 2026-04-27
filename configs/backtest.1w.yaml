@@ -1,0 +1,44 @@
+# 1万资金回测：在 picks_1w.yaml 的 top10 候选里做滚动 top-3 动量
+# 策略假设：screener 用的 60d momentum 在这批股票上真实有效
+# 时间窗口：过去 ~1 年，覆盖 ~250 交易日（足够 60d lookback + 多次 rebalance）
+
+data:
+  source: akshare
+  symbols:
+    - "002415"   # 海康威视
+    - "000301"   # 东方盛虹
+    - "600176"   # 中国巨石
+    - "600926"   # 杭州银行
+    - "601838"   # 成都银行
+    - "600015"   # 华夏银行
+    - "600875"   # 东方电气
+    - "601088"   # 中国神华
+    - "003816"   # 中国广核
+    - "002142"   # 宁波银行
+  start: 2025-04-01
+  end: 2026-04-17
+  freq: 1d
+  adjust: qfq
+  cache_dir: ./data/cache
+
+calendar:
+  enabled: true
+  cache_path: ./data/cache/ashare_calendar.parquet
+
+strategy:
+  name: xs_momentum
+  params:
+    lookback: 60            # 与 screener 的 momentum rule 对齐
+    top_n: 3                # 10 只中挑最强 3 只
+    rebalance_days: 20      # 月度换仓
+
+portfolio:
+  initial_cash: 10000
+  target_pct: 0.33          # 每 BUY 占 33% 权益 → 3 只满仓
+  commission_rate: 0.0003
+  min_commission: 5.0
+  stamp_tax_rate: 0.001
+
+execution:
+  backend: simulated
+  slippage_bps: 5

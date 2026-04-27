@@ -12,6 +12,7 @@ from alphaagent.screener.filters import (
     ExcludeST,
     MaxPrice,
     MinAvgVolume,
+    MinBarCount,
     MinListedDays,
     MinPrice,
     build_filter,
@@ -100,8 +101,17 @@ def test_min_listed_days_drops_new():
     assert f.keep("x", bars, old_meta)
 
 
-def test_min_listed_days_permissive_on_unknown_date():
+def test_min_listed_days_drops_on_unknown_date_by_default():
+    # Fail-closed: when meta lookup failed we cannot verify the stock is
+    # old enough, so drop it. Protects against silent filter relaxation
+    # when the meta provider (e.g. eastmoney) is unreachable.
     f = MinListedDays(min_days=250)
+    meta_no_date = StockMeta(symbol="x", name="x", list_date=None)
+    assert not f.keep("x", _bars([10]), meta_no_date)
+
+
+def test_min_listed_days_permissive_when_opted_in():
+    f = MinListedDays(min_days=250, drop_on_missing=False)
     meta_no_date = StockMeta(symbol="x", name="x", list_date=None)
     assert f.keep("x", _bars([10]), meta_no_date)
 
@@ -117,6 +127,26 @@ def test_build_filter_unknown_type():
         build_filter({"type": "nope"})
 
 
+def test_min_bar_count_drops_when_too_few_bars():
+    f = MinBarCount(min_bars=50)
+    # A symbol with only 10 bars (long suspension) should be dropped.
+    assert not f.keep("x", _bars([10] * 10), _meta())
+    # A symbol with full coverage is kept.
+    assert f.keep("x", _bars([10] * 60), _meta())
+
+
+def test_min_bar_count_rejects_bad_arg():
+    with pytest.raises(ValueError, match="min_bars"):
+        MinBarCount(min_bars=0)
+
+
 def test_all_builtin_filters_registered():
-    expected = {"min_price", "max_price", "min_avg_volume", "exclude_st", "min_listed_days"}
+    expected = {
+        "min_price",
+        "max_price",
+        "min_avg_volume",
+        "exclude_st",
+        "min_listed_days",
+        "min_bar_count",
+    }
     assert set(BUILTIN_FILTERS) == expected

@@ -8,6 +8,8 @@ so caches use a daily TTL — code is immutable so the cache key is safe.
 from __future__ import annotations
 
 import json
+import logging
+import threading
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -15,6 +17,8 @@ from datetime import date, datetime
 from pathlib import Path
 
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 _ST_NAME_KEYWORDS = ("ST", "退", "*")
 
@@ -117,16 +121,26 @@ class AkshareMetaProvider(StockMetaProvider):
         if self._cache_dir is not None:
             self._cache_dir.mkdir(parents=True, exist_ok=True)
         self._name_table: dict[str, str] | None = None
+        self._name_table_lock = threading.Lock()
 
     def _load_name_table(self) -> dict[str, str]:
         if self._name_table is not None:
             return self._name_table
-        import akshare as ak
+        with self._name_table_lock:
+            if self._name_table is not None:
+                return self._name_table
+            try:
+                import akshare as ak
 
-        df = ak.stock_info_a_code_name()
-        df["code"] = df["code"].astype(str).str.zfill(6)
-        self._name_table = dict(zip(df["code"], df["name"], strict=True))
-        return self._name_table
+                df = ak.stock_info_a_code_name()
+                df["code"] = df["code"].astype(str).str.zfill(6)
+                self._name_table = dict(zip(df["code"], df["name"], strict=True))
+            except Exception:
+                # akshare's a_code_name internally hits SH+SZ+BSE; one
+                # endpoint failing (e.g. SSL on bse.cn) takes the whole
+                # call down. Degrade gracefully — name will be the symbol.
+                self._name_table = {}
+            return self._name_table
 
     def _cache_path(self, symbol: str) -> Path | None:
         if self._cache_dir is None:
@@ -168,6 +182,10 @@ class AkshareMetaProvider(StockMetaProvider):
         try:
             import akshare as ak
 
+            # NOTE: this endpoint is eastmoney-only. When eastmoney is
+            # blocked and callers switch daily bars to sina, list_date
+            # degrades to None — callers should use filters with
+            # ``drop_on_missing=True`` so the universe isn't silently relaxed.
             info = ak.stock_individual_info_em(symbol=symbol)
             kv = dict(zip(info["item"], info["value"], strict=True))
             industry = kv.get("行业") or None
@@ -177,9 +195,11 @@ class AkshareMetaProvider(StockMetaProvider):
                     list_date = datetime.strptime(str(ld), "%Y%m%d").date()
                 except ValueError:
                     list_date = None
-        except Exception:
-            # Network/akshare hiccups shouldn't kill the whole screen run.
-            pass
+        except Exception as exc:
+            # Network/akshare hiccups shouldn't kill the whole screen run,
+            # but the failure must be visible — downstream filters treat
+            # missing list_date as a hard drop by default.
+            logger.warning("meta fetch failed for %s: %s", symbol, exc)
 
         payload = {
             "name": name,

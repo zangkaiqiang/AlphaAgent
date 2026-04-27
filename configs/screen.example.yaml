@@ -3,7 +3,7 @@
 
 universe:
   source: akshare_index        # static | akshare_index | tushare_index
-  index_code: "000300"         # CSI 300. Other codes: 000016 (SSE 50), 000905 (CSI 500), 000852 (CSI 1000)
+  index_code: "000300"         # 当前更适合先做龙头/流动性优先; 想更激进可试 000905
   # static example:
   # source: static
   # symbols: ["600000", "000001"]
@@ -15,9 +15,10 @@ data:
   freq: 1d
   adjust: qfq
   cache_dir: ./data/cache
+  akshare_backend: sina        # eastmoney | sina (eastmoney 不稳时改用 sina)
 
-as_of: 2024-12-31              # selection "today"; auto-snapped to nearest prior trading day
-lookback_days: 120             # >= max rule lookback + buffer
+as_of: 2026-04-23              # 用最近一个完整交易日,避免盘中/未收盘的日线噪声
+lookback_days: 180             # 覆盖 120d 动量 + 60d 突破/均线 + 缓冲
 calendar_enabled: true         # use AShareCalendar for as_of normalization
 
 meta:
@@ -28,31 +29,40 @@ meta:
 # Hard filters: drop symbols before scoring.
 filters:
   - type: min_price
-    min_price: 3.0
+    min_price: 5.0             # 不做低价股/边缘票
   - type: max_price
-    max_price: 500.0
+    max_price: 45.0            # 放宽给成长主线龙头; 若单票预算严格 ≤3000 元,改回 30
   - type: min_avg_volume
     lookback: 20
-    min_amount: 10000000       # 1e7 CNY (10M)
+    min_amount: 30000000       # 3e7 CNY (30M), 当前风格更重视流动性
   - type: exclude_st
   - type: min_listed_days
-    min_days: 250
+    min_days: 500              # 尽量避开上市不久、题材弹性过大的票
+  - type: min_bar_count
+    min_bars: 120              # 180d 窗口中至少 120 条 bar, 剔除停牌/长缺口
 
-# Scoring rules. Weights auto-normalize; missing rules drop from denominator.
+# Scoring rules. Missing rules now contribute 0 to numerator while keeping
+# their weight in the denominator — a symbol that only hits 1 of N rules
+# no longer inflates to final_score=1.0.
 rules:
   - type: momentum             # cross-sectional
-    lookback: 60
-    weight: 0.4
+    lookback: 120
+    weight: 0.35               # 当前更看中中期趋势,不单押短线冲刺
   - type: above_ma             # absolute
     period: 60
-    weight: 0.2
+    score_scale: 0.08
+    weight: 0.20               # 站稳中期均线
+  - type: price_breakout       # absolute
+    lookback: 60
+    score_scale: 0.06
+    weight: 0.25               # 趋势延续比单纯放量更重要
   - type: low_volatility       # cross-sectional
     lookback: 20
-    weight: 0.2
+    weight: 0.10               # 保留"趋势质量"约束,但不过度惩罚高景气波动
   - type: volume_breakout      # absolute
     lookback: 20
-    z_threshold: 1.5
-    weight: 0.2
+    z_threshold: 1.2
+    weight: 0.10               # 要有量能确认,但不鼓励追最极端的爆量日
 
 execution:
   max_workers: 16              # concurrent fetch threads
@@ -60,6 +70,10 @@ execution:
 
 output:
   path: ./picks.yaml
-  top_n: 30
+  top_n: 20                    # 当前更适合做更短的人工复核名单
   with_reasons: full           # full | compact | none
   format: yaml                 # yaml | csv
+
+# Diversity cap: after global ranking, keep at most N picks per industry.
+# Null disables. 当前主线容易扎堆,示例默认收紧到 2.
+max_per_industry: 2

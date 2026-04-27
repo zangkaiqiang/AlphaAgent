@@ -23,22 +23,36 @@ from alphaagent.screener.rules import (
 
 
 class AboveMA(AbsoluteRule):
-    """Latest close above a simple moving average."""
+    """Latest close above a simple moving average — continuous score.
+
+    ``score = clip((close / ma - 1) / score_scale, 0, 1)``.
+    The default ``score_scale=0.10`` means "10% above MA = full score".
+    Prior binary 0/1 scoring wasted cross-symbol information; a stock
+    15% above its MA and one 0.1% above should not tie.
+    """
 
     name = "above_ma"
 
-    def __init__(self, period: int = 60, weight: float = 1.0):
+    def __init__(
+        self, period: int = 60, weight: float = 1.0, score_scale: float = 0.10
+    ):
         if period < 2:
             raise ValueError("period must be >= 2")
+        if score_scale <= 0:
+            raise ValueError("score_scale must be > 0")
         self.period = period
         self.weight = weight
+        self.score_scale = score_scale
 
     def evaluate(self, bars: pd.DataFrame) -> Reason | None:
         if len(bars) < self.period:
             return None
         close = float(bars["close"].iloc[-1])
         ma = float(bars["close"].tail(self.period).mean())
-        score = 1.0 if close > ma else 0.0
+        if ma <= 0:
+            return None
+        excess = close / ma - 1.0
+        score = max(0.0, min(1.0, excess / self.score_scale))
         return Reason(
             rule_name=self.name,
             score=score,
@@ -47,22 +61,33 @@ class AboveMA(AbsoluteRule):
 
 
 class PriceBreakout(AbsoluteRule):
-    """Latest close strictly above the highest close of the prior N bars."""
+    """Latest close above the prior-N-bar max — continuous score.
+
+    ``score = clip((close / prior_max - 1) / score_scale, 0, 1)``.
+    """
 
     name = "price_breakout"
 
-    def __init__(self, lookback: int = 60, weight: float = 1.0):
+    def __init__(
+        self, lookback: int = 60, weight: float = 1.0, score_scale: float = 0.10
+    ):
         if lookback < 2:
             raise ValueError("lookback must be >= 2")
+        if score_scale <= 0:
+            raise ValueError("score_scale must be > 0")
         self.lookback = lookback
         self.weight = weight
+        self.score_scale = score_scale
 
     def evaluate(self, bars: pd.DataFrame) -> Reason | None:
         if len(bars) < self.lookback + 1:
             return None
         close = float(bars["close"].iloc[-1])
         prior_max = float(bars["close"].iloc[-(self.lookback + 1) : -1].max())
-        score = 1.0 if close > prior_max else 0.0
+        if prior_max <= 0:
+            return None
+        excess = close / prior_max - 1.0
+        score = max(0.0, min(1.0, excess / self.score_scale))
         return Reason(
             rule_name=self.name,
             score=score,

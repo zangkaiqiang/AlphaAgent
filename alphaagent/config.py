@@ -19,6 +19,9 @@ class DataConfig(BaseModel):
     adjust: str = "qfq"  # qfq | hfq | "" (akshare/tushare)
     tushare_token: str | None = None  # or via TUSHARE_TOKEN env
     cache_dir: str | None = None  # enables CachedDataSource when set
+    # akshare-only: which upstream to use for daily bars.
+    # Switch to "sina" if eastmoney is unreachable from your network.
+    akshare_backend: str = "eastmoney"
 
 
 class CalendarConfig(BaseModel):

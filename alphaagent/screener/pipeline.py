@@ -9,9 +9,13 @@ See ``docs/screener-design.md`` §3.4 for the executable spec.
 
 from __future__ import annotations
 
+import logging
+from collections import defaultdict
 from datetime import date, datetime, timedelta
 
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 from alphaagent.calendar.ashare import AShareCalendar
 from alphaagent.data.base import DataSource
@@ -38,9 +42,15 @@ class ScreenerPipeline:
         max_workers: int = 16,
         show_progress: bool = True,
         freq: str = "1d",
+        max_fetch_failure_rate: float = 0.1,
+        max_per_industry: int | None = None,
     ):
         if lookback_days < 1:
             raise ValueError("lookback_days must be >= 1")
+        if not 0.0 <= max_fetch_failure_rate <= 1.0:
+            raise ValueError("max_fetch_failure_rate must be in [0, 1]")
+        if max_per_industry is not None and max_per_industry < 1:
+            raise ValueError("max_per_industry must be >= 1 when set")
         self.universe = universe
         self.data_source = data_source
         self.meta_provider = meta_provider
@@ -53,6 +63,8 @@ class ScreenerPipeline:
         self.max_workers = max_workers
         self.show_progress = show_progress
         self.freq = freq
+        self.max_fetch_failure_rate = max_fetch_failure_rate
+        self.max_per_industry = max_per_industry
 
     @property
     def all_rules(self) -> list[AbsoluteRule | CrossSectionalRule]:
@@ -72,7 +84,7 @@ class ScreenerPipeline:
         # 1.5x to cover weekends/holidays, but DataSource will handle slicing.
         start = resolved - timedelta(days=int(self.lookback_days * 1.5) + 7)
 
-        panel = fetch_panel(
+        fetch_result = fetch_panel(
             self.data_source,
             symbols,
             start=start,
@@ -82,6 +94,17 @@ class ScreenerPipeline:
             show_progress=self.show_progress,
             desc="Fetching bars",
         )
+        panel = fetch_result.bars
+        if fetch_result.failed:
+            # Already logged at WARN by fetcher; raise if the universe has
+            # collapsed past the threshold so callers don't silently rank
+            # on a fraction of the intended pool.
+            if fetch_result.failure_rate > self.max_fetch_failure_rate:
+                raise RuntimeError(
+                    f"fetch failure rate {fetch_result.failure_rate:.1%} "
+                    f"exceeds max_fetch_failure_rate={self.max_fetch_failure_rate:.1%}; "
+                    f"{len(fetch_result.failed)} of {len(symbols)} symbols failed"
+                )
 
         meta_map = self.meta_provider.get_meta_batch(symbols, resolved)
 
@@ -127,6 +150,9 @@ class ScreenerPipeline:
 
         picks.sort(key=lambda p: p.final_score, reverse=True)
 
+        if self.max_per_industry is not None:
+            picks = _apply_industry_cap(picks, self.max_per_industry)
+
         return ScreenResult(
             generated_at=date.today(),
             resolved_as_of=resolved,
@@ -151,21 +177,38 @@ class ScreenerPipeline:
 def _weighted_normalize(
     reasons: list[Reason], rule_weights: dict[str, float]
 ) -> float:
-    """Sum (weight * score) over rules that produced a Reason; divide by sum
-    of weights of those rules. Missing rules drop out of both numerator and
-    denominator. Returns 0.0 if no rules applied.
+    """Weighted score with a fixed denominator over *all* configured rules.
+
+    A rule that didn't produce a Reason (e.g. not enough bars) contributes
+    0 to the numerator but its full weight stays in the denominator. This
+    prevents a symbol that only hit 1 of N rules from tying a symbol that
+    hit all N — the earlier "drop missing from denominator" behavior let
+    thin coverage inflate final_score to 1.0.
     """
-    if not reasons:
-        return 0.0
-    total_weight = 0.0
-    weighted = 0.0
-    for r in reasons:
-        w = rule_weights.get(r.rule_name, 1.0)
-        weighted += w * r.score
-        total_weight += w
+    total_weight = sum(rule_weights.values())
     if total_weight == 0.0:
         return 0.0
+    weighted = sum(
+        rule_weights.get(r.rule_name, 0.0) * r.score for r in reasons
+    )
     return weighted / total_weight
+
+
+def _apply_industry_cap(picks: list[Pick], max_per_industry: int) -> list[Pick]:
+    """Keep picks in score order, dropping ones that exceed the per-industry
+    quota. Picks with unknown industry share a single "(unknown)" bucket —
+    this is conservative: when we can't place a pick we treat it as
+    fungible with other unplaceable picks rather than letting the cap
+    silently fail open.
+    """
+    counts: dict[str, int] = defaultdict(int)
+    kept: list[Pick] = []
+    for p in picks:
+        industry = (p.metadata or {}).get("industry") or "(unknown)"
+        if counts[industry] < max_per_industry:
+            kept.append(p)
+            counts[industry] += 1
+    return kept
 
 
 def _now_iso() -> str:

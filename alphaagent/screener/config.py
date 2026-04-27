@@ -84,6 +84,8 @@ class ScreenAppConfig(BaseModel):
     rules: list[RuleConfig]
     execution: ExecutionConfig = ExecutionConfig()
     output: OutputConfig = OutputConfig()
+    # Diversity: cap per-industry picks after global ranking. None disables.
+    max_per_industry: int | None = None
 
     @model_validator(mode="before")
     @classmethod

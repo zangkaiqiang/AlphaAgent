@@ -1,0 +1,1094 @@
+metadata:
+  generated_at: '2026-04-24'
+  resolved_as_of: '2026-04-17'
+  universe: akshare_index:000300
+  universe_size: 300
+  filtered_size: 227
+  rules:
+  - above_ma (weight=0.20)
+  - volume_breakout (weight=0.20)
+  - momentum (weight=0.40)
+  - low_volatility (weight=0.20)
+  universe_snapshot:
+  - '000001'
+  - '000002'
+  - '000063'
+  - '000100'
+  - '000157'
+  - '000166'
+  - '000301'
+  - '000333'
+  - 000338
+  - 000408
+  - '000425'
+  - 000538
+  - 000568
+  - 000596
+  - '000617'
+  - '000625'
+  - '000630'
+  - '000651'
+  - '000661'
+  - 000708
+  - '000725'
+  - 000768
+  - '000776'
+  - 000786
+  - 000792
+  - 000807
+  - 000858
+  - 000876
+  - 000895
+  - 000938
+  - 000963
+  - 000975
+  - 000977
+  - 000983
+  - 000999
+  - 001391
+  - 001965
+  - 001979
+  - '002001'
+  - '002027'
+  - 002028
+  - 002049
+  - '002050'
+  - '002074'
+  - '002142'
+  - 002179
+  - '002230'
+  - '002236'
+  - '002241'
+  - '002252'
+  - '002304'
+  - '002311'
+  - '002352'
+  - '002371'
+  - 002384
+  - '002415'
+  - '002422'
+  - 002459
+  - '002460'
+  - '002463'
+  - '002466'
+  - '002475'
+  - 002493
+  - 002594
+  - '002600'
+  - '002601'
+  - '002625'
+  - 002648
+  - 002709
+  - '002714'
+  - '002736'
+  - 002916
+  - 002920
+  - 002938
+  - 003816
+  - '300014'
+  - '300015'
+  - '300033'
+  - '300059'
+  - '300122'
+  - '300124'
+  - '300251'
+  - '300274'
+  - '300308'
+  - '300316'
+  - '300347'
+  - '300394'
+  - '300408'
+  - '300413'
+  - '300418'
+  - '300433'
+  - '300442'
+  - '300476'
+  - '300498'
+  - '300502'
+  - '300628'
+  - '300661'
+  - '300750'
+  - '300759'
+  - '300760'
+  - '300782'
+  - '300803'
+  - '300832'
+  - '300866'
+  - '300896'
+  - '300979'
+  - '300999'
+  - '301236'
+  - '301269'
+  - '302132'
+  - '600000'
+  - '600009'
+  - '600010'
+  - '600011'
+  - '600015'
+  - '600016'
+  - '600018'
+  - '600019'
+  - '600023'
+  - '600025'
+  - '600026'
+  - '600027'
+  - '600028'
+  - '600029'
+  - '600030'
+  - '600031'
+  - '600036'
+  - '600039'
+  - '600048'
+  - '600050'
+  - '600061'
+  - '600066'
+  - '600085'
+  - '600089'
+  - '600104'
+  - '600111'
+  - '600115'
+  - '600150'
+  - '600160'
+  - '600161'
+  - '600176'
+  - '600183'
+  - '600188'
+  - '600196'
+  - '600219'
+  - '600233'
+  - '600276'
+  - '600309'
+  - '600346'
+  - '600362'
+  - '600372'
+  - '600377'
+  - '600406'
+  - '600415'
+  - '600426'
+  - '600436'
+  - '600438'
+  - '600460'
+  - '600482'
+  - '600489'
+  - '600515'
+  - '600519'
+  - '600522'
+  - '600547'
+  - '600570'
+  - '600584'
+  - '600585'
+  - '600588'
+  - '600600'
+  - '600660'
+  - '600674'
+  - '600690'
+  - '600741'
+  - '600760'
+  - '600795'
+  - '600803'
+  - '600809'
+  - '600845'
+  - '600875'
+  - '600886'
+  - '600887'
+  - '600893'
+  - '600900'
+  - '600905'
+  - '600918'
+  - '600919'
+  - '600926'
+  - '600930'
+  - '600938'
+  - '600941'
+  - '600958'
+  - '600989'
+  - '600999'
+  - '601006'
+  - '601009'
+  - '601012'
+  - '601018'
+  - '601021'
+  - '601058'
+  - '601059'
+  - '601066'
+  - '601077'
+  - '601088'
+  - '601100'
+  - '601111'
+  - '601117'
+  - '601127'
+  - '601136'
+  - '601138'
+  - '601166'
+  - '601169'
+  - '601186'
+  - '601211'
+  - '601225'
+  - '601229'
+  - '601236'
+  - '601238'
+  - '601288'
+  - '601298'
+  - '601318'
+  - '601319'
+  - '601328'
+  - '601336'
+  - '601360'
+  - '601377'
+  - '601390'
+  - '601398'
+  - '601456'
+  - '601600'
+  - '601601'
+  - '601607'
+  - '601618'
+  - '601628'
+  - '601633'
+  - '601658'
+  - '601668'
+  - '601669'
+  - '601688'
+  - '601689'
+  - '601698'
+  - '601728'
+  - '601766'
+  - '601788'
+  - '601800'
+  - '601808'
+  - '601816'
+  - '601818'
+  - '601825'
+  - '601838'
+  - '601857'
+  - '601868'
+  - '601872'
+  - '601877'
+  - '601878'
+  - '601881'
+  - '601888'
+  - '601898'
+  - '601899'
+  - '601901'
+  - '601916'
+  - '601919'
+  - '601939'
+  - '601985'
+  - '601988'
+  - '601995'
+  - '601998'
+  - '603019'
+  - '603195'
+  - '603259'
+  - '603260'
+  - '603288'
+  - '603296'
+  - '603369'
+  - '603392'
+  - '603501'
+  - '603799'
+  - '603893'
+  - '603986'
+  - '603993'
+  - '605117'
+  - '605499'
+  - '688008'
+  - '688009'
+  - '688012'
+  - '688036'
+  - '688041'
+  - '688047'
+  - '688082'
+  - '688111'
+  - '688126'
+  - '688169'
+  - '688187'
+  - '688223'
+  - '688256'
+  - '688271'
+  - '688303'
+  - '688396'
+  - '688472'
+  - '688506'
+  - '688981'
+symbols:
+- '002415'
+- '000301'
+- '600176'
+- '600926'
+- '601838'
+- '600015'
+- '600875'
+- '601088'
+- 003816
+- '002142'
+- '600919'
+- '601998'
+- '601006'
+- '601077'
+- '601225'
+- '601988'
+- 000895
+- '002236'
+- '600023'
+- '601825'
+- '600036'
+- '601939'
+- '601169'
+- '601857'
+- 002709
+- '601009'
+- '601328'
+- 000708
+- '601229'
+- '600188'
+candidates:
+- symbol: '002415'
+  name: 海康威视
+  final_score: 0.8487
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 33.13
+      ma60: 31.5777
+  - rule: volume_breakout
+    score: 1.0
+    detail:
+      amount_z: 1.729
+      threshold: 1.5
+  - rule: momentum
+    score: 0.8009
+    detail:
+      return_60d: 0.0588
+  - rule: low_volatility
+    score: 0.6416
+    detail:
+      vol_20d: 0.0168
+  metadata:
+    industry: 计算机设备
+    list_date: '2010-05-28'
+- symbol: '000301'
+  name: 东方盛虹
+  final_score: 0.8257
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 12.17
+      ma60: 11.9112
+  - rule: volume_breakout
+    score: 1.0
+    detail:
+      amount_z: 5.291
+      threshold: 1.5
+  - rule: momentum
+    score: 0.9071
+    detail:
+      return_60d: 0.1417
+  - rule: low_volatility
+    score: 0.3142
+    detail:
+      vol_20d: 0.0248
+  metadata:
+    industry: 炼化及贸易
+    list_date: '2000-05-29'
+- symbol: '600176'
+  name: 中国巨石
+  final_score: 0.8097
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 33.5
+      ma60: 24.9005
+  - rule: volume_breakout
+    score: 1.0
+    detail:
+      amount_z: 1.974
+      threshold: 1.5
+  - rule: momentum
+    score: 1.0
+    detail:
+      return_60d: 0.8276
+  - rule: low_volatility
+    score: 0.0487
+    detail:
+      vol_20d: 0.0346
+  metadata:
+    industry: 玻璃玻纤
+    list_date: '1999-04-22'
+- symbol: '600926'
+  name: 杭州银行
+  final_score: 0.7336
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 16.99
+      ma60: 16.4338
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -1.343
+      threshold: 1.5
+  - rule: momentum
+    score: 0.854
+    detail:
+      return_60d: 0.0835
+  - rule: low_volatility
+    score: 0.9602
+    detail:
+      vol_20d: 0.01075
+  metadata:
+    industry: 银行Ⅱ
+    list_date: '2016-10-27'
+- symbol: '601838'
+  name: 成都银行
+  final_score: 0.7319
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 17.23
+      ma60: 16.6547
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -0.181
+      threshold: 1.5
+  - rule: momentum
+    score: 0.8363
+    detail:
+      return_60d: 0.0775
+  - rule: low_volatility
+    score: 0.9867
+    detail:
+      vol_20d: 0.00994
+  metadata:
+    industry: 银行Ⅱ
+    list_date: '2018-01-31'
+- symbol: '600015'
+  name: 华夏银行
+  final_score: 0.7248
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 7.14
+      ma60: 6.8627
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -1.138
+      threshold: 1.5
+  - rule: momentum
+    score: 0.885
+    detail:
+      return_60d: 0.1087
+  - rule: low_volatility
+    score: 0.854
+    detail:
+      vol_20d: 0.01282
+  metadata:
+    industry: 银行Ⅱ
+    list_date: '2003-09-12'
+- symbol: '600875'
+  name: 东方电气
+  final_score: 0.7176
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 41.72
+      ma60: 34.2657
+  - rule: volume_breakout
+    score: 0.5924
+    detail:
+      amount_z: 0.889
+      threshold: 1.5
+  - rule: momentum
+    score: 0.9956
+    detail:
+      return_60d: 0.6681
+  - rule: low_volatility
+    score: 0.0044
+    detail:
+      vol_20d: 0.04492
+  metadata:
+    industry: 其他电源设备Ⅱ
+    list_date: '1995-10-10'
+- symbol: '601088'
+  name: 中国神华
+  final_score: 0.7097
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 45.55
+      ma60: 44.7182
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -1.075
+      threshold: 1.5
+  - rule: momentum
+    score: 0.8628
+    detail:
+      return_60d: 0.096
+  - rule: low_volatility
+    score: 0.823
+    detail:
+      vol_20d: 0.01372
+  metadata:
+    industry: 煤炭开采
+    list_date: '2007-10-09'
+- symbol: 003816
+  name: 中国广核
+  final_score: 0.7088
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 4.39
+      ma60: 4.151
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -1.195
+      threshold: 1.5
+  - rule: momentum
+    score: 0.9115
+    detail:
+      return_60d: 0.1462
+  - rule: low_volatility
+    score: 0.7212
+    detail:
+      vol_20d: 0.01497
+  metadata:
+    industry: 电力
+    list_date: '2019-08-26'
+- symbol: '002142'
+  name: 宁波银行
+  final_score: 0.7088
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 31.14
+      ma60: 30.7552
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -0.688
+      threshold: 1.5
+  - rule: momentum
+    score: 0.8496
+    detail:
+      return_60d: 0.0809
+  - rule: low_volatility
+    score: 0.8451
+    detail:
+      vol_20d: 0.01318
+  metadata:
+    industry: 银行Ⅱ
+    list_date: '2007-07-19'
+- symbol: '600919'
+  name: 江苏银行
+  final_score: 0.7062
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 10.83
+      ma60: 10.4713
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -0.892
+      threshold: 1.5
+  - rule: momentum
+    score: 0.8451
+    detail:
+      return_60d: 0.0798
+  - rule: low_volatility
+    score: 0.8407
+    detail:
+      vol_20d: 0.01319
+  metadata:
+    industry: 银行Ⅱ
+    list_date: '2016-08-02'
+- symbol: '601998'
+  name: 中信银行
+  final_score: 0.7044
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 8.19
+      ma60: 7.6985
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -1.042
+      threshold: 1.5
+  - rule: momentum
+    score: 0.8274
+    detail:
+      return_60d: 0.0734
+  - rule: low_volatility
+    score: 0.8673
+    detail:
+      vol_20d: 0.01241
+  metadata:
+    industry: 银行Ⅱ
+    list_date: '2007-04-27'
+- symbol: '601006'
+  name: 大秦铁路
+  final_score: 0.7035
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 5.25
+      ma60: 5.1692
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -1.118
+      threshold: 1.5
+  - rule: momentum
+    score: 0.7699
+    detail:
+      return_60d: 0.0437
+  - rule: low_volatility
+    score: 0.9779
+    detail:
+      vol_20d: 0.01044
+  metadata:
+    industry: 铁路公路
+    list_date: '2006-08-01'
+- symbol: '601077'
+  name: 渝农商行
+  final_score: 0.7027
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 7.2
+      ma60: 6.7197
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -1.498
+      threshold: 1.5
+  - rule: momentum
+    score: 0.9204
+    detail:
+      return_60d: 0.1502
+  - rule: low_volatility
+    score: 0.6726
+    detail:
+      vol_20d: 0.01568
+  metadata:
+    industry: 银行Ⅱ
+    list_date: '2019-10-29'
+- symbol: '601225'
+  name: 陕西煤业
+  final_score: 0.7027
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 24.8
+      ma60: 24.2067
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -1.089
+      threshold: 1.5
+  - rule: momentum
+    score: 0.8938
+    detail:
+      return_60d: 0.1161
+  - rule: low_volatility
+    score: 0.7257
+    detail:
+      vol_20d: 0.01496
+  metadata:
+    industry: 煤炭开采
+    list_date: '2014-01-28'
+- symbol: '601988'
+  name: 中国银行
+  final_score: 0.692
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 5.77
+      ma60: 5.4753
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -1.233
+      threshold: 1.5
+  - rule: momentum
+    score: 0.8053
+    detail:
+      return_60d: 0.0626
+  - rule: low_volatility
+    score: 0.8496
+    detail:
+      vol_20d: 0.01311
+  metadata:
+    industry: 银行Ⅱ
+    list_date: '2006-07-05'
+- symbol: 000895
+  name: 双汇发展
+  final_score: 0.6903
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 28.4
+      ma60: 27.0607
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -1.373
+      threshold: 1.5
+  - rule: momentum
+    score: 0.8717
+    detail:
+      return_60d: 0.1051
+  - rule: low_volatility
+    score: 0.708
+    detail:
+      vol_20d: 0.01517
+  metadata:
+    industry: 食品加工
+    list_date: '1998-12-10'
+- symbol: '002236'
+  name: 大华股份
+  final_score: 0.6903
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 19.16
+      ma60: 18.4383
+  - rule: volume_breakout
+    score: 1.0
+    detail:
+      amount_z: 1.8
+      threshold: 1.5
+  - rule: momentum
+    score: 0.4646
+    detail:
+      return_60d: -0.0608
+  - rule: low_volatility
+    score: 0.5221
+    detail:
+      vol_20d: 0.0192
+  metadata:
+    industry: 计算机设备
+    list_date: '2008-05-20'
+- symbol: '600023'
+  name: 浙能电力
+  final_score: 0.6858
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 5.51
+      ma60: 5.2725
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -1.111
+      threshold: 1.5
+  - rule: momentum
+    score: 0.8894
+    detail:
+      return_60d: 0.1131
+  - rule: low_volatility
+    score: 0.6504
+    detail:
+      vol_20d: 0.01638
+  metadata:
+    industry: 电力
+    list_date: '2013-12-19'
+- symbol: '601825'
+  name: 沪农商行
+  final_score: 0.685
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 9.14
+      ma60: 8.7185
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -0.946
+      threshold: 1.5
+  - rule: momentum
+    score: 0.7655
+    detail:
+      return_60d: 0.0422
+  - rule: low_volatility
+    score: 0.8938
+    detail:
+      vol_20d: 0.01193
+  metadata:
+    industry: 银行Ⅱ
+    list_date: '2021-08-19'
+- symbol: '600036'
+  name: 招商银行
+  final_score: 0.6814
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 39.52
+      ma60: 39.0917
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -0.299
+      threshold: 1.5
+  - rule: momentum
+    score: 0.7212
+    detail:
+      return_60d: 0.0107
+  - rule: low_volatility
+    score: 0.9646
+    detail:
+      vol_20d: 0.01062
+  metadata:
+    industry: null
+    list_date: null
+- symbol: '601939'
+  name: 建设银行
+  final_score: 0.6796
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 9.41
+      ma60: 9.0478
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -1.158
+      threshold: 1.5
+  - rule: momentum
+    score: 0.7611
+    detail:
+      return_60d: 0.0421
+  - rule: low_volatility
+    score: 0.8761
+    detail:
+      vol_20d: 0.01223
+  metadata:
+    industry: 银行Ⅱ
+    list_date: '2007-09-25'
+- symbol: '601169'
+  name: 北京银行
+  final_score: 0.677
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 5.42
+      ma60: 5.3938
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -0.985
+      threshold: 1.5
+  - rule: momentum
+    score: 0.7301
+    detail:
+      return_60d: 0.0169
+  - rule: low_volatility
+    score: 0.9248
+    detail:
+      vol_20d: 0.01151
+  metadata:
+    industry: 银行Ⅱ
+    list_date: '2007-09-19'
+- symbol: '601857'
+  name: 中国石油
+  final_score: 0.677
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 11.53
+      ma60: 11.4672
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -1.26
+      threshold: 1.5
+  - rule: momentum
+    score: 0.9292
+    detail:
+      return_60d: 0.1565
+  - rule: low_volatility
+    score: 0.5265
+    detail:
+      vol_20d: 0.01919
+  metadata:
+    industry: 炼化及贸易
+    list_date: '2007-11-05'
+- symbol: 002709
+  name: 天赐材料
+  final_score: 0.6768
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 48.79
+      ma60: 43.859
+  - rule: volume_breakout
+    score: 0.4637
+    detail:
+      amount_z: 0.696
+      threshold: 1.5
+  - rule: momentum
+    score: 0.8805
+    detail:
+      return_60d: 0.1061
+  - rule: low_volatility
+    score: 0.1593
+    detail:
+      vol_20d: 0.02963
+  metadata:
+    industry: 电池
+    list_date: '2014-01-23'
+- symbol: '601009'
+  name: 南京银行
+  final_score: 0.6761
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 11.11
+      ma60: 11.0378
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -1.758
+      threshold: 1.5
+  - rule: momentum
+    score: 0.7832
+    detail:
+      return_60d: 0.0471
+  - rule: low_volatility
+    score: 0.8142
+    detail:
+      vol_20d: 0.01376
+  metadata:
+    industry: 银行Ⅱ
+    list_date: '2007-07-19'
+- symbol: '601328'
+  name: 交通银行
+  final_score: 0.6637
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 6.96
+      ma60: 6.7863
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -1.056
+      threshold: 1.5
+  - rule: momentum
+    score: 0.7035
+    detail:
+      return_60d: 0.0043
+  - rule: low_volatility
+    score: 0.9115
+    detail:
+      vol_20d: 0.01161
+  metadata:
+    industry: 银行Ⅱ
+    list_date: '2007-05-15'
+- symbol: 000708
+  name: 中信特钢
+  final_score: 0.6575
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 16.74
+      ma60: 16.3992
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -1.766
+      threshold: 1.5
+  - rule: momentum
+    score: 0.8142
+    detail:
+      return_60d: 0.0669
+  - rule: low_volatility
+    score: 0.6593
+    detail:
+      vol_20d: 0.01595
+  metadata:
+    industry: 特钢Ⅱ
+    list_date: '1997-03-26'
+- symbol: '601229'
+  name: 上海银行
+  final_score: 0.6531
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 9.74
+      ma60: 9.7257
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -1.978
+      threshold: 1.5
+  - rule: momentum
+    score: 0.6681
+    detail:
+      return_60d: -0.0142
+  - rule: low_volatility
+    score: 0.9292
+    detail:
+      vol_20d: 0.01151
+  metadata:
+    industry: 银行Ⅱ
+    list_date: '2016-11-16'
+- symbol: '600188'
+  name: 兖矿能源
+  final_score: 0.6513
+  reasons:
+  - rule: above_ma
+    score: 1.0
+    detail:
+      close: 19.0
+      ma60: 17.8965
+  - rule: volume_breakout
+    score: 0.0
+    detail:
+      amount_z: -1.223
+      threshold: 1.5
+  - rule: momentum
+    score: 0.9646
+    detail:
+      return_60d: 0.3659
+  - rule: low_volatility
+    score: 0.3274
+    detail:
+      vol_20d: 0.0241
+  metadata:
+    industry: 煤炭开采
+    list_date: '1998-07-01'

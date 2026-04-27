@@ -45,6 +45,21 @@ from alphaagent.strategy.base import Strategy
 PortfolioLike = Portfolio | MultiStrategyPortfolio
 
 
+def _source_id_for_data_cfg(data_cfg) -> str:
+    """Identifier used to partition the on-disk cache.
+
+    Different upstreams may return different adjust/amount semantics for the
+    same symbol; keying the cache by source avoids silently mixing rows.
+    """
+    if data_cfg.source == "akshare":
+        return f"akshare-{data_cfg.akshare_backend}-{data_cfg.adjust or 'qfq'}"
+    if data_cfg.source == "tushare":
+        return f"tushare-{data_cfg.adjust or 'qfq'}"
+    if data_cfg.source == "csv":
+        return "csv"
+    return data_cfg.source
+
+
 def _build_data_source(cfg: AppConfig) -> DataSource:
     source: DataSource
     if cfg.data.source == "csv":
@@ -54,7 +69,10 @@ def _build_data_source(cfg: AppConfig) -> DataSource:
     elif cfg.data.source == "akshare":
         from alphaagent.data.akshare_source import AkShareDataSource
 
-        source = AkShareDataSource(adjust=cfg.data.adjust or "qfq")
+        source = AkShareDataSource(
+            adjust=cfg.data.adjust or "qfq",
+            daily_backend=cfg.data.akshare_backend,
+        )
     elif cfg.data.source == "tushare":
         from alphaagent.data.tushare_source import TushareDataSource
 
@@ -65,7 +83,9 @@ def _build_data_source(cfg: AppConfig) -> DataSource:
         raise ValueError(f"unknown data source: {cfg.data.source}")
 
     if cfg.data.cache_dir:
-        source = CachedDataSource(source, cfg.data.cache_dir)
+        source = CachedDataSource(
+            source, cfg.data.cache_dir, _source_id_for_data_cfg(cfg.data)
+        )
     return source
 
 
@@ -336,7 +356,10 @@ def _build_screen_data_source(cfg):
     elif cfg.data.source == "akshare":
         from alphaagent.data.akshare_source import AkShareDataSource
 
-        source = AkShareDataSource(adjust=cfg.data.adjust or "qfq")
+        source = AkShareDataSource(
+            adjust=cfg.data.adjust or "qfq",
+            daily_backend=cfg.data.akshare_backend,
+        )
     elif cfg.data.source == "tushare":
         from alphaagent.data.tushare_source import TushareDataSource
 
@@ -347,7 +370,9 @@ def _build_screen_data_source(cfg):
         raise ValueError(f"unknown data source: {cfg.data.source}")
 
     if cfg.data.cache_dir:
-        source = CachedDataSource(source, cfg.data.cache_dir)
+        source = CachedDataSource(
+            source, cfg.data.cache_dir, _source_id_for_data_cfg(cfg.data)
+        )
     return source
 
 
@@ -415,6 +440,7 @@ def screen(config: Path, output: Path | None, replay: Path | None, dry_run: bool
         max_workers=cfg.execution.max_workers,
         show_progress=cfg.execution.show_progress,
         freq=cfg.data.freq,
+        max_per_industry=cfg.max_per_industry,
     )
 
     replay_symbols = _load_replay_snapshot(replay) if replay else None

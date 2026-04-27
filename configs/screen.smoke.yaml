@@ -1,0 +1,64 @@
+# Smoke-test config: 10 well-known A-share blue chips.
+# Use this to verify the screener works end-to-end before running the
+# full HS300 pull (which takes ~1 minute the first time).
+
+universe:
+  source: static
+  symbols:
+    - "600519"   # 贵州茅台 (白酒)
+    - "000858"   # 五粮液 (白酒)
+    - "601318"   # 中国平安 (保险)
+    - "600036"   # 招商银行 (银行)
+    - "000001"   # 平安银行 (银行)
+    - "600000"   # 浦发银行 (银行)
+    - "000333"   # 美的集团 (家电)
+    - "000651"   # 格力电器 (家电)
+    - "002594"   # 比亚迪 (新能源车)
+    - "300750"   # 宁德时代 (新能源)
+
+data:
+  source: akshare
+  freq: 1d
+  adjust: qfq
+  cache_dir: ./data/cache
+  akshare_backend: sina        # eastmoney is blocked from this network
+
+as_of: 2026-04-17              # last Friday — use a recent trading day
+lookback_days: 120
+calendar_enabled: true
+
+meta:
+  source: akshare
+  cache_dir: ./data/cache/meta
+
+filters:
+  - type: min_price
+    min_price: 3.0
+  - type: exclude_st
+  - type: min_listed_days
+    min_days: 250
+
+rules:
+  - type: momentum
+    lookback: 60
+    weight: 0.4
+  - type: above_ma
+    period: 60
+    weight: 0.2
+  - type: low_volatility
+    lookback: 20
+    weight: 0.2
+  - type: volume_breakout
+    lookback: 20
+    z_threshold: 1.5
+    weight: 0.2
+
+execution:
+  max_workers: 8
+  show_progress: true
+
+output:
+  path: ./picks_smoke.yaml
+  top_n: 10
+  with_reasons: full
+  format: yaml
