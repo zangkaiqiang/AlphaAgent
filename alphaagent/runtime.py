@@ -77,9 +77,12 @@ def build_data_source(cfg: AppConfig) -> DataSource:
         raise ValueError(f"unknown data source: {cfg.data.source}")
 
     if cfg.data.cache_dir:
+        # The DB is a server-level resource resolved uniformly via get_database()
+        # (ALPHAAGENT_DB / default) — same instance the job store and calendar use,
+        # so a single process never splits across two database files.
         source = SqliteBarCache(
             source,
-            get_database(cfg.storage.db_path),
+            get_database(),
             source_id_for_data_cfg(cfg.data),
         )
     return source
