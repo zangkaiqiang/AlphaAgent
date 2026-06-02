@@ -485,29 +485,33 @@ rules:                         # 打分规则,权重自动归一化
 
 ### 选股结果结构
 
-`GET /api/screeners/{id}/result` 返回以下结构(与旧版 `picks.yaml` 格式一致):
+`GET /api/screeners/{id}/result` 返回 JSON(`ScreenResultDTO`):
 
-```yaml
-metadata:
-  resolved_as_of: 2024-12-30          # 自动规整后的真实交易日
-  universe: akshare_index:000300
-  universe_size: 300
-  filtered_size: 240
-  universe_snapshot: ["000001", "000002", ...]   # 全部成分股,供 --replay 复现
-symbols:                              # 直接复制到 strategy.yaml 的 data.symbols
-  - "600519"
-  - "000858"
-candidates:                           # 详细评分,供人工审核
-  - symbol: "600519"
-    name: "贵州茅台"
-    final_score: 0.873
-    reasons:
-      - { rule: momentum, score: 0.95, detail: { return_60d: 0.185 } }
-      - { rule: above_ma, score: 1.0, detail: { close: 1620.5, ma60: 1502.3 } }
+```json
+{
+  "generated_at": "2024-12-31",
+  "resolved_as_of": "2024-12-30",
+  "universe_name": "akshare_index:000300",
+  "universe_size": 300,
+  "filtered_size": 240,
+  "rules_applied": ["momentum (weight=0.40)", "above_ma (weight=0.20)"],
+  "symbols": ["600519", "000858"],
+  "picks": [
+    {
+      "symbol": "600519",
+      "name": "贵州茅台",
+      "final_score": 0.873,
+      "reasons": [
+        { "rule_name": "momentum", "score": 0.95, "detail": { "return_60d": 0.185 } },
+        { "rule_name": "above_ma", "score": 1.0, "detail": { "close": 1620.5, "ma60": 1502.3 } }
+      ],
+      "metadata": { "industry": "白酒", "list_date": "2001-08-27" }
+    }
+  ]
+}
 ```
 
-`output.with_reasons` 三档:`full`(完整理由)/ `compact`(只保留最高分规则)/ `none`(只输出 symbols 列表)。
-`output.format` 支持 `yaml` 和 `csv`(Excel 友好)。
+`symbols` 是前 `output.top_n` 名,可直接填入回测的 `data.symbols`;`picks` 含完整评分理由供人工审核。前端「选股」页直接渲染该结构。
 
 ### 人工审核 checklist
 

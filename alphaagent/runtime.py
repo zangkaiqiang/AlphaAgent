@@ -1,9 +1,9 @@
-"""Shared engine wiring used by both the CLI and the API.
+"""Shared engine wiring used by the API.
 
-CLI and API need the same logic: take an AppConfig, build the strategies,
-the portfolio, execution backend, calendar, risk manager — and hand back
-a ready-to-run BacktestEngine. Centralising it here keeps both paths in
-sync and avoids re-implementing the dispatch tree in two places.
+Takes an AppConfig and builds the strategies, the portfolio, execution
+backend, calendar, and risk manager — handing back the pieces needed to
+run a BacktestEngine. Centralising it here keeps the dispatch tree in one
+place for the API runner (and any future entry points).
 """
 
 from __future__ import annotations
