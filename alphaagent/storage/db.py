@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS trade_calendar (
 );
 CREATE TABLE IF NOT EXISTS jobs (
     id TEXT PRIMARY KEY,
+    kind TEXT NOT NULL DEFAULT 'backtest',
     label TEXT,
     status TEXT NOT NULL,
     progress REAL NOT NULL DEFAULT 0,
@@ -61,6 +62,13 @@ class Database:
         with self._write_lock:
             self._conn.executescript(_SCHEMA)
             self._conn.commit()
+            # Idempotent migration: add 'kind' column to pre-existing DBs.
+            cols = {row[1] for row in self._conn.execute("PRAGMA table_info(jobs)")}
+            if "kind" not in cols:
+                self._conn.execute(
+                    "ALTER TABLE jobs ADD COLUMN kind TEXT NOT NULL DEFAULT 'backtest'"
+                )
+                self._conn.commit()
 
     def execute(self, sql: str, params: tuple = ()) -> None:
         with self._write_lock:

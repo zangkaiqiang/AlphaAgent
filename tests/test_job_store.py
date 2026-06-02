@@ -46,3 +46,19 @@ def test_list_includes_persisted_history(tmp_path):
     a.update(status=JobStatus.COMPLETED, result={})
     store2 = JobStore(db)
     assert a.id in {j.id for j in store2.list()}
+
+
+def test_kind_roundtrips_and_filters(tmp_path):
+    db = Database(str(tmp_path / "t.db"))
+    store = JobStore(db)
+    b = store.create(label="bt")                 # default kind backtest
+    s = store.create(label="sc", kind="screen")
+    b.update(status=JobStatus.COMPLETED, result={})
+    s.update(status=JobStatus.COMPLETED, result={})
+
+    store2 = JobStore(db)  # restart -> hydrate
+    assert store2.get(b.id).kind == "backtest"
+    assert store2.get(s.id).kind == "screen"
+    screen_ids = {j.id for j in store2.list(kind="screen")}
+    assert screen_ids == {s.id}
+    assert b.id in {j.id for j in store2.list()}  # no-arg lists all
