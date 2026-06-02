@@ -40,19 +40,19 @@ export const routes: RouteRecordRaw[] = [
         path: 'analysis/company',
         name: 'analysis-company',
         component: () => import('@/pages/analysis/company/Index.vue'),
-        meta: { title: '公司分析', icon: 'OfficeBuilding', section: '分析', enabled: false },
+        meta: { title: '公司分析', icon: 'OfficeBuilding', section: '分析' },
       },
       {
         path: 'analysis/industry',
         name: 'analysis-industry',
         component: () => import('@/pages/analysis/industry/Index.vue'),
-        meta: { title: '行业分析', icon: 'Histogram', section: '分析', enabled: false },
+        meta: { title: '行业分析', icon: 'Histogram', section: '分析' },
       },
       {
         path: 'analysis/market',
         name: 'analysis-market',
         component: () => import('@/pages/analysis/market/Index.vue'),
-        meta: { title: '大盘', icon: 'DataLine', section: '分析', enabled: false },
+        meta: { title: '大盘', icon: 'DataLine', section: '分析' },
       },
       {
         path: 'live',

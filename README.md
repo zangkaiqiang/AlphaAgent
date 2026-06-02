@@ -557,9 +557,14 @@ alphaagent-api                       # 127.0.0.1:8000
 cd web && npm install && npm run dev # http://localhost:5173
 ```
 
-主要模块:回测 / 策略库 /(规划中)选股、公司分析、行业分析、大盘、实盘监控。
+主要模块:回测、策略库、**公司分析**(K 线 + 财务 + 多周期收益)、**行业分析**(涨跌排名/资金流/成分股)、**大盘**(指数 + 宽度 + 北向)、(规划中)选股、实盘监控。
 新增模块只需 `routers/<m>.py` + `pages/<m>/Index.vue` + 一条 router 记录,菜单自动出现。
 详见 [`web/README.md`](./web/README.md)。
+
+### 分析模块的数据层
+
+`alphaagent.fundamentals` 是与 `alphaagent.data`(OHLCV)并列的另一类数据源,负责基本面 / 行业 / 大盘的非 bar 数据。`FundamentalsProvider` 抽象接口,默认实现 `AkShareFundamentalsProvider`(懒加载 akshare),测试用 `StaticFundamentalsProvider` 注入。
+`alphaagent.analytics` 是纯函数分析层,只接受数据返回派生指标,CLI 和 API 都能调用。
 
 ## 开发
 
@@ -581,7 +586,9 @@ ruff check alphaagent tests
 - [x] 券商对接:PaperBroker 模拟盘 + QMT 实盘骨架
 - [x] 选股(screener)pipeline + CLI
 - [x] FastAPI Web API + Vue 3 前端骨架(回测页面 + sidebar)
-- [ ] 公司分析 / 行业分析 / 大盘 三大分析模块
+- [x] 公司分析(K 线 + 财务指标 + 多窗口收益)
+- [x] 行业分析(涨跌排名 + 资金流 + 成分股下钻)
+- [x] 大盘 dashboard(指数 + 市场宽度 + 北向资金)
 - [ ] 实盘监控页面
 - [ ] XTP 实盘接入
 - [ ] QMT 生产化(对账、重连、订单状态轮询)
