@@ -53,3 +53,19 @@ def test_is_trading_session_combines_date_and_time(cal):
     assert not cal.is_trading_session(datetime(2024, 1, 2, 12, 0))
     # Non-trading day, regardless of time.
     assert not cal.is_trading_session(datetime(2024, 1, 6, 10, 0))
+
+
+def test_calendar_db_roundtrip(tmp_path):
+    from datetime import date
+
+    from alphaagent.storage.db import Database
+
+    db = Database(str(tmp_path / "t.db"))
+    db.executemany(
+        "INSERT OR REPLACE INTO trade_calendar (dt) VALUES (?)",
+        [("2024-01-02",), ("2024-01-03",)],
+    )
+    cal = AShareCalendar(db=db)
+    assert cal.is_trading_day(date(2024, 1, 2))
+    assert cal.is_trading_day(date(2024, 1, 3))
+    assert not cal.is_trading_day(date(2024, 1, 4))
