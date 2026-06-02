@@ -33,9 +33,10 @@ def test_build_universe_unknown_raises():
 
 
 def test_build_meta_provider_csv(tmp_path):
+    from types import SimpleNamespace
+
     import pandas as pd
 
-    from types import SimpleNamespace
     from alphaagent.screener.build import build_meta_provider
     from alphaagent.screener.meta import CSVMetaProvider
 
@@ -53,6 +54,7 @@ def test_build_meta_provider_csv(tmp_path):
 
 def test_build_meta_provider_unknown_raises():
     from types import SimpleNamespace
+
     import pytest
 
     from alphaagent.screener.build import build_meta_provider
@@ -67,8 +69,8 @@ def test_build_meta_provider_unknown_raises():
 def test_build_screen_data_source_csv_no_cache(tmp_path):
     from types import SimpleNamespace
 
-    from alphaagent.screener.build import build_screen_data_source
     from alphaagent.data.csv_source import CSVDataSource
+    from alphaagent.screener.build import build_screen_data_source
 
     data = SimpleNamespace(
         source="csv",
@@ -92,8 +94,8 @@ def test_build_screen_data_source_wraps_sqlite_when_cache(tmp_path, monkeypatch)
 
     _dbmod._INSTANCES.clear()
 
-    from alphaagent.screener.build import build_screen_data_source
     from alphaagent.data.sqlite_cache import SqliteBarCache
+    from alphaagent.screener.build import build_screen_data_source
 
     data = SimpleNamespace(
         source="csv",
@@ -111,6 +113,7 @@ def test_build_screen_data_source_wraps_sqlite_when_cache(tmp_path, monkeypatch)
 
 def test_build_screen_data_source_csv_missing_root_raises():
     from types import SimpleNamespace
+
     import pytest
 
     from alphaagent.screener.build import build_screen_data_source
