@@ -56,7 +56,7 @@ def submit_backtest(
 
 @router.get("")
 def list_jobs(store: Annotated[JobStore, Depends(get_job_store)]):
-    items = [_job_to_info(j).model_dump(mode="json") for j in store.list()]
+    items = [_job_to_info(j).model_dump(mode="json") for j in store.list(kind="backtest")]
     return ok(items)
 
 
@@ -122,5 +122,6 @@ async def watch_job(
             if job.status in TERMINAL:
                 break
             await asyncio.sleep(0.2)
+        await websocket.close(code=1000)
     except WebSocketDisconnect:
         pass

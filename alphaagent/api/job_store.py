@@ -28,6 +28,7 @@ TERMINAL = {JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED}
 class Job:
     id: str
     label: str | None = None
+    kind: str = "backtest"
     status: JobStatus = JobStatus.PENDING
     progress: float = 0.0
     bars_processed: int = 0
@@ -75,7 +76,7 @@ def _dt(s: str | None) -> datetime | None:
 
 def _job_to_row(job: Job) -> tuple:
     return (
-        job.id, job.label, job.status.value, job.progress,
+        job.id, job.kind, job.label, job.status.value, job.progress,
         job.bars_processed, job.bars_total, job.fill_count,
         _iso(job.started_at), _iso(job.completed_at), job.error,
         json.dumps(job.result) if job.result is not None else None,
@@ -84,9 +85,11 @@ def _job_to_row(job: Job) -> tuple:
 
 
 def _row_to_job(row) -> Job:
+    keys = row.keys() if hasattr(row, "keys") else []
     return Job(
         id=row["id"],
         label=row["label"],
+        kind=row["kind"] if "kind" in keys and row["kind"] else "backtest",
         status=JobStatus(row["status"]),
         progress=row["progress"],
         bars_processed=row["bars_processed"],
@@ -102,9 +105,9 @@ def _row_to_job(row) -> Job:
 
 _INSERT = (
     "INSERT OR REPLACE INTO jobs "
-    "(id,label,status,progress,bars_processed,bars_total,fill_count,"
+    "(id,kind,label,status,progress,bars_processed,bars_total,fill_count,"
     "started_at,completed_at,error,result_json,created_at) "
-    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
 )
 
 
@@ -129,9 +132,9 @@ class JobStore:
             job._persist = self._persist_job
             self._jobs[job.id] = job
 
-    def create(self, label: str | None = None) -> Job:
+    def create(self, label: str | None = None, kind: str = "backtest") -> Job:
         jid = str(uuid.uuid4())
-        job = Job(id=jid, label=label)
+        job = Job(id=jid, label=label, kind=kind)
         job._persist = self._persist_job
         with self._lock:
             self._jobs[jid] = job
@@ -141,9 +144,12 @@ class JobStore:
     def get(self, jid: str) -> Job | None:
         return self._jobs.get(jid)
 
-    def list(self) -> list[Job]:
+    def list(self, kind: str | None = None) -> list[Job]:
         with self._lock:
-            return list(self._jobs.values())
+            jobs = list(self._jobs.values())
+        if kind is not None:
+            jobs = [j for j in jobs if j.kind == kind]
+        return jobs
 
     def delete(self, jid: str) -> bool:
         with self._lock:
