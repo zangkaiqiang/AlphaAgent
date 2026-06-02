@@ -85,7 +85,11 @@ def _run(job: Job, cfg: AppConfig) -> BacktestResult:
     )
     from alphaagent.storage.db import get_database
 
-    calendar = build_calendar(cfg.calendar, get_database(cfg.storage.db_path))
+    # The DB is a server-level resource (ALPHAAGENT_DB env / default), shared with
+    # the job store. Resolve it lazily — only when the calendar actually needs it —
+    # so a disabled-calendar run never opens/creates a database file.
+    calendar_db = get_database() if cfg.calendar.enabled else None
+    calendar = build_calendar(cfg.calendar, calendar_db)
     risk_manager = build_risk_manager(cfg.risk, portfolio)
 
     def on_progress(bars_processed: int, fill_count: int) -> None:
