@@ -42,6 +42,43 @@ def _int(x: Any) -> int | None:
     return int(f) if f is not None else None
 
 
+_RETRY_ATTEMPTS = 3
+_RETRY_BASE_DELAY = 0.6
+
+
+def _is_transient(exc: Exception) -> bool:
+    """True for network/proxy errors worth retrying (akshare uses ``requests``)."""
+    try:
+        import requests
+
+        if isinstance(exc, requests.exceptions.RequestException):
+            return True
+    except Exception:
+        pass
+    return isinstance(exc, (ConnectionError, TimeoutError, OSError))
+
+
+def _retry(producer, *, attempts: int = _RETRY_ATTEMPTS, base_delay: float = _RETRY_BASE_DELAY):
+    """Call ``producer()``, retrying transient network errors with backoff.
+
+    The local proxy these calls route through drops connections intermittently;
+    a fresh attempt usually re-establishes one. Non-transient errors raise
+    immediately; the last transient error is re-raised once attempts run out.
+    """
+    last: Exception | None = None
+    for i in range(attempts):
+        try:
+            return producer()
+        except Exception as e:
+            if not _is_transient(e):
+                raise
+            last = e
+            if i < attempts - 1:
+                time.sleep(base_delay * (2**i))
+    assert last is not None
+    raise last
+
+
 class _TTLCache:
     def __init__(self, ttl_seconds: float):
         self.ttl = ttl_seconds
@@ -71,7 +108,7 @@ class AkShareFundamentalsProvider(FundamentalsProvider):
     def _fetch_info(self, symbol: str) -> SecurityInfo:
         import akshare as ak
 
-        df = ak.stock_individual_info_em(symbol=symbol)
+        df = _retry(lambda: ak.stock_individual_info_em(symbol=symbol))
         info = dict(zip(df["item"], df["value"], strict=False))
         listed_raw = info.get("上市时间")
         listed = None
@@ -98,7 +135,7 @@ class AkShareFundamentalsProvider(FundamentalsProvider):
         import akshare as ak
 
         try:
-            df = ak.stock_financial_abstract(symbol=symbol)
+            df = _retry(lambda: ak.stock_financial_abstract(symbol=symbol))
         except Exception:
             return []
         if df is None or df.empty:
@@ -136,7 +173,7 @@ class AkShareFundamentalsProvider(FundamentalsProvider):
 
         market = "sh" if symbol.startswith(("60", "68")) else "sz"
         try:
-            df = ak.stock_individual_fund_flow(stock=symbol, market=market)
+            df = _retry(lambda: ak.stock_individual_fund_flow(stock=symbol, market=market))
         except Exception:
             return []
         if df is None or df.empty:
@@ -171,7 +208,7 @@ class AkShareFundamentalsProvider(FundamentalsProvider):
     def _fetch_industries(self) -> list[IndustrySummary]:
         import akshare as ak
 
-        df = ak.stock_board_industry_name_em()
+        df = _retry(lambda: ak.stock_board_industry_name_em())
         out: list[IndustrySummary] = []
         for _, row in df.iterrows():
             out.append(
@@ -200,7 +237,7 @@ class AkShareFundamentalsProvider(FundamentalsProvider):
         )
         if name is None:
             return []
-        df = ak.stock_board_industry_cons_em(symbol=name)
+        df = _retry(lambda: ak.stock_board_industry_cons_em(symbol=name))
         out: list[IndustryConstituent] = []
         for _, row in df.iterrows():
             out.append(
@@ -227,7 +264,7 @@ class AkShareFundamentalsProvider(FundamentalsProvider):
 
         indices: list[MarketIndex] = []
         try:
-            df = ak.stock_zh_index_spot_em(symbol="沪深重要指数")
+            df = _retry(lambda: ak.stock_zh_index_spot_em(symbol="沪深重要指数"))
             for _, row in df.iterrows():
                 indices.append(
                     MarketIndex(
@@ -244,7 +281,7 @@ class AkShareFundamentalsProvider(FundamentalsProvider):
 
         breadth = None
         try:
-            spot = ak.stock_zh_a_spot_em()
+            spot = _retry(lambda: ak.stock_zh_a_spot_em())
             if spot is not None and not spot.empty:
                 changes = spot["涨跌幅"].dropna()
                 breadth = MarketBreadth(
@@ -260,7 +297,7 @@ class AkShareFundamentalsProvider(FundamentalsProvider):
 
         northbound = None
         try:
-            df = ak.stock_hsgt_north_net_flow_in_em(symbol="北上")
+            df = _retry(lambda: ak.stock_hsgt_north_net_flow_in_em(symbol="北上"))
             if df is not None and not df.empty:
                 last = df.iloc[-1]
                 northbound = _float(last.get("成交净买额")) or _float(last.get("value"))
