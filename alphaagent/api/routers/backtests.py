@@ -16,7 +16,7 @@ from fastapi import (
 
 from alphaagent.api.deps import get_job_store
 from alphaagent.api.envelope import err, ok
-from alphaagent.api.job_store import Job, JobStore
+from alphaagent.api.job_store import TERMINAL, Job, JobStore
 from alphaagent.api.runner import run_backtest_job
 from alphaagent.api.schemas.backtest import (
     BacktestSubmitRequest,
@@ -25,8 +25,6 @@ from alphaagent.api.schemas.backtest import (
 )
 
 router = APIRouter()
-
-TERMINAL = {JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED}
 
 
 def _job_to_info(job: Job) -> JobInfo:

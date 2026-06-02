@@ -12,11 +12,12 @@ from functools import lru_cache
 from alphaagent.api.job_store import JobStore
 from alphaagent.data.base import DataSource
 from alphaagent.fundamentals.base import FundamentalsProvider
+from alphaagent.storage.db import get_database
 
 
 @lru_cache(maxsize=1)
 def get_job_store() -> JobStore:
-    return JobStore()
+    return JobStore(get_database())
 
 
 def get_fundamentals_provider() -> FundamentalsProvider:
