@@ -5,7 +5,6 @@ Uses only CSVDataSource + CSVMetaProvider (no network).
 
 from __future__ import annotations
 
-import os
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -14,8 +13,7 @@ import pytest
 
 from alphaagent.api.job_store import JobStore
 from alphaagent.api.schemas.backtest import JobStatus
-from alphaagent.storage.db import Database, _INSTANCES, _INSTANCES_LOCK
-
+from alphaagent.storage.db import _INSTANCES, _INSTANCES_LOCK, Database
 
 # ---------------------------------------------------------------------------
 # Helpers
