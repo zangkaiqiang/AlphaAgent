@@ -77,3 +77,65 @@ export interface StrategyInfo {
   description: string | null
   params: StrategyParam[]
 }
+
+// ── Screener types ──────────────────────────────────────────────────────────
+
+export interface ScreenerJobInfo {
+  id: string
+  label: string | null
+  status: JobStatus
+  progress: number
+  picks_count: number | null
+  started_at: string | null
+  completed_at: string | null
+  error: string | null
+}
+
+export interface ScreenPickReason {
+  rule_name: string
+  score: number
+  detail: Record<string, unknown>
+}
+
+export interface ScreenPick {
+  symbol: string
+  name: string
+  final_score: number
+  reasons: ScreenPickReason[]
+  metadata: Record<string, unknown>
+}
+
+export interface ScreenResult {
+  generated_at: string
+  resolved_as_of: string
+  universe_name: string
+  universe_size: number
+  filtered_size: number
+  rules_applied: string[]
+  symbols: string[]
+  picks: ScreenPick[]
+}
+
+export interface RuleParamInfo {
+  name: string
+  default: unknown
+  required: boolean
+}
+
+export interface RuleInfo {
+  type: string
+  category: string
+  class_name: string
+  params: RuleParamInfo[]
+}
+
+export interface FilterInfo {
+  type: string
+  class_name: string
+  params: RuleParamInfo[]
+}
+
+export interface ScreenerRulesCatalog {
+  rules: RuleInfo[]
+  filters: FilterInfo[]
+}

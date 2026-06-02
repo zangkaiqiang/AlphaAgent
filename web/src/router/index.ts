@@ -34,7 +34,7 @@ export const routes: RouteRecordRaw[] = [
         path: 'screener',
         name: 'screener',
         component: () => import('@/pages/screener/Index.vue'),
-        meta: { title: '选股', icon: 'Filter', section: '研究', enabled: false },
+        meta: { title: '选股', icon: 'Filter', section: '研究' },
       },
       {
         path: 'analysis/company',
