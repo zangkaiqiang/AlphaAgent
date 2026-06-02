@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from alphaagent.api.envelope import ok
-from alphaagent.api.routers import backtests, strategies
+from alphaagent.api.routers import backtests, screeners, strategies
 from alphaagent.api.routers.analysis import company, industry, market
 
 app = FastAPI(title="AlphaAgent API", version="0.1.0")
@@ -30,6 +30,7 @@ app.add_middleware(
 )
 
 app.include_router(backtests.router, prefix="/api/backtests", tags=["backtests"])
+app.include_router(screeners.router, prefix="/api/screeners", tags=["screeners"])
 app.include_router(strategies.router, prefix="/api/strategies", tags=["strategies"])
 app.include_router(company.router, prefix="/api/analysis/company", tags=["analysis"])
 app.include_router(industry.router, prefix="/api/analysis/industry", tags=["analysis"])

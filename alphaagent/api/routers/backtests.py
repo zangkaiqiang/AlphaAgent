@@ -56,7 +56,7 @@ def submit_backtest(
 
 @router.get("")
 def list_jobs(store: Annotated[JobStore, Depends(get_job_store)]):
-    items = [_job_to_info(j).model_dump(mode="json") for j in store.list()]
+    items = [_job_to_info(j).model_dump(mode="json") for j in store.list(kind="backtest")]
     return ok(items)
 
 
