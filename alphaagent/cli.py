@@ -39,6 +39,11 @@ from alphaagent.risk.portfolio_risk import (
     RiskRule,
 )
 from alphaagent.risk.sector_map import CSVSectorMap, DictSectorMap, SectorMap
+from alphaagent.screener.build import (
+    build_meta_provider,
+    build_screen_data_source,
+    build_universe,
+)
 from alphaagent.strategy import registry
 from alphaagent.strategy.base import Strategy
 
@@ -310,72 +315,6 @@ def list_strategies() -> None:
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-def _build_universe(cfg):
-    from alphaagent.screener.universe import (
-        AkshareIndexUniverse,
-        StaticUniverse,
-        TushareIndexUniverse,
-    )
-
-    src = cfg.universe.source
-    if src == "static":
-        return StaticUniverse(cfg.universe.symbols, name="static")
-    if src == "akshare_index":
-        return AkshareIndexUniverse(cfg.universe.index_code)
-    if src == "tushare_index":
-        return TushareIndexUniverse(cfg.universe.index_code)
-    raise ValueError(f"unknown universe source: {src!r}")
-
-
-def _build_meta_provider(cfg):
-    from alphaagent.screener.meta import (
-        AkshareMetaProvider,
-        CSVMetaProvider,
-        TushareMetaProvider,
-    )
-
-    src = cfg.meta.source
-    if src == "akshare":
-        return AkshareMetaProvider(cache_dir=cfg.meta.cache_dir)
-    if src == "csv":
-        return CSVMetaProvider(cfg.meta.csv)
-    if src == "tushare":
-        return TushareMetaProvider(cache_dir=cfg.meta.cache_dir)
-    raise ValueError(f"unknown meta source: {src!r}")
-
-
-def _build_screen_data_source(cfg):
-    """Like _build_data_source but wraps the screener's DataConfig."""
-    from alphaagent.data.cache import CachedDataSource
-    from alphaagent.data.csv_source import CSVDataSource
-
-    if cfg.data.source == "csv":
-        if not cfg.data.root:
-            raise ValueError("data.root is required for csv source")
-        source = CSVDataSource(cfg.data.root)
-    elif cfg.data.source == "akshare":
-        from alphaagent.data.akshare_source import AkShareDataSource
-
-        source = AkShareDataSource(
-            adjust=cfg.data.adjust or "qfq",
-            daily_backend=cfg.data.akshare_backend,
-        )
-    elif cfg.data.source == "tushare":
-        from alphaagent.data.tushare_source import TushareDataSource
-
-        source = TushareDataSource(
-            token=cfg.data.tushare_token, adjust=cfg.data.adjust or "qfq"
-        )
-    else:
-        raise ValueError(f"unknown data source: {cfg.data.source}")
-
-    if cfg.data.cache_dir:
-        source = CachedDataSource(
-            source, cfg.data.cache_dir, _source_id_for_data_cfg(cfg.data)
-        )
-    return source
-
-
 def _load_replay_snapshot(path: Path) -> list[str]:
     import yaml as _yaml
 
@@ -406,7 +345,7 @@ def screen(config: Path, output: Path | None, replay: Path | None, dry_run: bool
     from alphaagent.screener.rules_builtin import build_rule, split_rules
 
     cfg = load_screen_config(config)
-    universe = _build_universe(cfg)
+    universe = build_universe(cfg)
     filters = [build_filter(f.to_kwargs() | {"type": f.type}) for f in cfg.filters]
     rules = [build_rule(r.to_kwargs()) for r in cfg.rules]
     abs_rules, xs_rules = split_rules(rules)
@@ -423,8 +362,8 @@ def screen(config: Path, output: Path | None, replay: Path | None, dry_run: bool
         click.echo("--dry-run: config OK, exiting without fetching data.")
         return
 
-    data_source = _build_screen_data_source(cfg)
-    meta_provider = _build_meta_provider(cfg)
+    data_source = build_screen_data_source(cfg)
+    meta_provider = build_meta_provider(cfg)
     calendar = AShareCalendar() if cfg.calendar_enabled else None
 
     pipeline = ScreenerPipeline(
