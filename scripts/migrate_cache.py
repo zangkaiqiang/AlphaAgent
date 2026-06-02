@@ -57,6 +57,9 @@ def main() -> None:
     ap.add_argument("--calendar", default=None, help="Optional calendar parquet path.")
     args = ap.parse_args()
 
+    if not Path(args.cache_dir).is_dir():
+        raise SystemExit(f"cache_dir not found: {args.cache_dir}")
+
     db = Database(resolve_db_path(args.db))
     imported, rows, skipped = migrate_bars(db, args.cache_dir)
     print(f"bars: imported {imported} files, {rows} rows, skipped {skipped} legacy")
