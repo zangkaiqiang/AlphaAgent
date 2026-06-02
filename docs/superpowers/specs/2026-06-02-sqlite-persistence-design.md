@@ -3,6 +3,7 @@
 - 日期:2026-06-02
 - 状态:待实现
 - 架构方案:A(单库 + 薄存储层)
+- 定位:**Web-only 迁移路线图的 Phase 1**(三阶段见 §14)。本次整体方向是「功能全部走 Web、移除 CLI 命令模式」。
 
 ## 1. 背景与目标
 
@@ -138,15 +139,16 @@ CREATE INDEX IF NOT EXISTS idx_jobs_created ON jobs(created_at);
 - `api/deps.py`:新增 `get_database()`(返回 `get_database()` 单例);`get_job_store()` 改为持有该 `Database` 的单例 `JobStore`。
 - 测试:`app.dependency_overrides` 注入用 `Database(":memory:")` 或 tmp 文件构造的 `JobStore`/`get_database`。
 
-## 9. 迁移命令 `alphaagent migrate-cache`
+## 9. 迁移脚本 `scripts/migrate_cache.py`
 
-CLI 新增子命令(`cli.py`):
+一次性运维脚本(**非功能 CLI**;`uv run python scripts/migrate_cache.py ...`)。定位为 ops 脚本,与「功能走 Web」方向不冲突。
 
-- 参数:`--cache-dir`(默认 `./data/cache`)、`--db`(默认走 `storage.db_path`/env)、`--calendar`(可选 parquet 路径)。
+- 参数(argparse):`--cache-dir`(默认 `./data/cache`)、`--db`(默认走 `storage.db_path`/env)、`--calendar`(可选 parquet 路径)。
 - 行情:遍历 `cache-dir` 下匹配 `{symbol}_{freq}__{source_id}.parquet` 的文件 → `read_parquet` → upsert 到 `bars`。
 - **旧命名 `{symbol}_{freq}.parquet`(无 `__source_id`):跳过并计数警告**(现有代码本就读不到,属孤儿数据)。
 - 日历:`--calendar` 给定则 `read_parquet` → 写 `trade_calendar`。
 - 结束打印:导入文件数 / 总行数 / 跳过(旧命名)数。
+- 迁移逻辑复用 storage 层(`Database` + upsert helper),不重复实现。
 - 幂等:`INSERT OR REPLACE`,可重复跑。
 
 ## 10. 配置变更 `config.py`
@@ -164,9 +166,10 @@ class AppConfig(BaseModel):
 
 ## 11. 清理与测试
 
-### 清理
-- 删除 `alphaagent/data/cache.py`(Parquet `CachedDataSource`)及其在 `runtime` 的导入。
-- `calendar/ashare.py` 移除 Parquet 读写。
+### 清理(注意跨阶段顺序)
+- Phase 1 **不删** `alphaagent/data/cache.py`:`cli.py` 仍依赖它(`cli.py` 在 Phase 3 才整体删除)。Phase 1 只让 `runtime.build_data_source` 与 API 改用 `SqliteBarCache`,Parquet 后端暂时与 SQLite 并存。
+- `alphaagent/data/cache.py` + `tests/test_cache.py` 随 `cli.py` 在 **Phase 3** 一并删除。
+- `calendar/ashare.py` 的 Parquet 读写在 Phase 1 即替换为 DB(`build_calendar` 走 runtime,不受 cli 影响);旧 `cache_path` 参数保留兼容,运行时不再用。
 
 ### 测试
 - `tests/test_sqlite_cache.py`(替换 `test_cache.py`):沿用「切片不重拉」「按需扩展(头+尾两次 fetch)」两个断言,用 tmp 文件 `Database`;新增 upsert 去重断言。
@@ -186,9 +189,24 @@ class AppConfig(BaseModel):
 - 回测 worker 线程同时写 `bars`(缓存)与 `jobs`(终态)——共用连接的写锁串行化,WAL 保证 WS 轮询线程的读不被阻塞。
 - WS 监听仍轮询内存中的 `job.version`(不变),不读库,延迟无回退。
 
-## 13. 验收标准
+## 13. 验收标准(Phase 1)
 
 1. `pytest -q` 全绿;`ruff check alphaagent tests` 无新增告警。
-2. `alphaagent backtest` 与 `alphaagent-api` 回测均落库,重启后 `GET /api/backtests` 仍能看到历史任务与结果。
-3. `alphaagent migrate-cache` 把现有 601 个 Parquet 导入 `bars`,旧命名文件被跳过并报数;迁移后回测命中缓存、不再联网拉历史。
-4. 删除 Parquet 后端后无残留引用。
+2. `alphaagent-api` 回测落库,重启后 `GET /api/backtests` 仍能看到历史任务与结果;上次未跑完的任务显示为 `interrupted by restart`。
+3. `uv run python scripts/migrate_cache.py` 把现有 601 个 Parquet 导入 `bars`,旧命名文件被跳过并报数;迁移后回测命中 SQLite 缓存、不再联网拉历史。
+4. `runtime.build_data_source` / API K 线 / `build_calendar` 均经 SQLite,不再读写 Parquet(Parquet 后端代码暂留,待 Phase 3 随 cli.py 清理)。
+
+## 14. Web-only 迁移路线图(三阶段)
+
+整体方向:**功能全部走 Web,移除 CLI 命令模式**。按依赖顺序分三阶段,每阶段独立可验收;各阶段有自己的 spec→plan→实现循环。
+
+| 阶段 | 内容 | 依赖 | 独立验收 |
+|---|---|---|---|
+| **Phase 1(本 spec)** | SQLite 持久化:jobs/bars/calendar 入库 + `scripts/migrate_cache.py` | 无 | §13 |
+| **Phase 2** | screener Web 后端:新增 `api/routers/screener.py`(参考 backtests 的 job 模型)+ schemas,接通 `web/pages/screener`;补 `list-screen-rules` 对应接口 | Phase 1(选股复用 SQLite 行情缓存) | 选股可在 Web 端跑通、出 picks |
+| **Phase 3** | 移除 CLI 功能命令:删 `cli.py`(backtest/screen/list-* 子命令)、`alphaagent` entry point、`data/cache.py`(Parquet 后端)、`tests/test_cache.py`;保留 `alphaagent-api` 启动入口与 `main.py` | Phase 2(Web 须先覆盖 screener) | `pytest` 绿;Web 覆盖全部原 CLI 功能;无对 cli.py/Parquet 的残留引用 |
+
+说明:
+- `cli.py` 当前自带一套重复的 `_build_*`(早于 `runtime.py` 的集中化)。Phase 1 不动 cli.py;它在 Phase 3 整体删除,故 Parquet 后端 (`data/cache.py`) 的删除也推迟到 Phase 3,避免中途破坏 cli.py 导入。
+- `alphaagent-api`(server 启动)与 `main.py`(`uv run python main.py`)**不属于**「CLI 命令模式」,保留。
+- Phase 2、Phase 3 各自再走一次设计→计划→实现;本 spec 仅锁定 Phase 1 细节与整体顺序。
