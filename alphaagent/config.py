@@ -74,6 +74,10 @@ class AgentConfig(BaseModel):
     model: str = "claude-sonnet-4-6"
 
 
+class StorageConfig(BaseModel):
+    db_path: str = "./data/alphaagent.db"
+
+
 class AppConfig(BaseModel):
     data: DataConfig
     # Accept either a single ``strategy`` or a list under ``strategies``.
@@ -85,6 +89,7 @@ class AppConfig(BaseModel):
     agent: AgentConfig = AgentConfig()
     calendar: CalendarConfig = CalendarConfig()
     risk: RiskConfig = RiskConfig()
+    storage: StorageConfig = StorageConfig()
 
     @model_validator(mode="before")
     @classmethod
@@ -92,7 +97,7 @@ class AppConfig(BaseModel):
         # YAML keys like `risk:` with all fields commented out parse to None.
         # Treat that as "use defaults" instead of erroring out.
         if isinstance(data, dict):
-            for key in ("portfolio", "execution", "agent", "calendar", "risk"):
+            for key in ("portfolio", "execution", "agent", "calendar", "risk", "storage"):
                 if data.get(key) is None and key in data:
                     data[key] = {}
         return data

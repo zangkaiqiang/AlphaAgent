@@ -69,3 +69,22 @@ def test_cannot_define_both_strategy_and_strategies():
 def test_requires_strategy_or_strategies():
     with pytest.raises(ValidationError, match="must define"):
         _load({})
+
+
+def test_storage_defaults_and_override():
+    from alphaagent.config import AppConfig
+
+    base = {
+        "data": {"source": "csv", "root": "./data", "symbols": ["600000"],
+                 "start": "2023-01-01", "end": "2023-12-31"},
+        "strategy": {"name": "ma_cross", "params": {}},
+    }
+    cfg = AppConfig(**base)
+    assert cfg.storage.db_path == "./data/alphaagent.db"
+
+    cfg2 = AppConfig(**base, storage={"db_path": "/tmp/x.db"})
+    assert cfg2.storage.db_path == "/tmp/x.db"
+
+    # `storage:` present but empty (all keys commented out) -> defaults, no error.
+    cfg3 = AppConfig(**base, storage=None)
+    assert cfg3.storage.db_path == "./data/alphaagent.db"
