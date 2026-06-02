@@ -16,6 +16,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from alphaagent.storage.db import Database
+
 # A-share continuous-trading sessions (local exchange time, Asia/Shanghai).
 # Opening call auction (09:15-09:25) and closing call auction (14:57-15:00)
 # are included here for simplicity; tighten if needed.
@@ -29,8 +31,10 @@ class AShareCalendar:
     def __init__(
         self,
         trading_days: Iterable[date] | None = None,
+        db: Database | None = None,
         cache_path: str | Path | None = None,
     ):
+        self._db = db
         self._cache_path = Path(cache_path) if cache_path else None
         if trading_days is not None:
             self._days: set[date] = {self._to_date(d) for d in trading_days}
@@ -46,18 +50,31 @@ class AShareCalendar:
         return pd.Timestamp(d).date()
 
     def _load(self) -> set[date]:
-        if self._cache_path and self._cache_path.exists():
+        # 1) SQLite (preferred)
+        if self._db is not None:
+            rows = self._db.query("SELECT dt FROM trade_calendar")
+            if rows:
+                return {self._to_date(r["dt"]) for r in rows}
+        # 2) legacy parquet fallback (used by cli.py until it is removed)
+        elif self._cache_path and self._cache_path.exists():
             df = pd.read_parquet(self._cache_path)
             return {self._to_date(d) for d in df["trade_date"]}
 
+        # 3) fetch from akshare and persist
         import akshare as ak
 
         df = ak.tool_trade_date_hist_sina()
         df["trade_date"] = pd.to_datetime(df["trade_date"])
-        if self._cache_path:
+        days = {d.date() for d in df["trade_date"]}
+        if self._db is not None:
+            self._db.executemany(
+                "INSERT OR REPLACE INTO trade_calendar (dt) VALUES (?)",
+                [(d.isoformat(),) for d in sorted(days)],
+            )
+        elif self._cache_path:
             self._cache_path.parent.mkdir(parents=True, exist_ok=True)
             df.to_parquet(self._cache_path)
-        return {d.date() for d in df["trade_date"]}
+        return days
 
     def is_trading_day(self, d: date | datetime) -> bool:
         return self._to_date(d) in self._days

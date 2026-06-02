@@ -7,7 +7,7 @@
 - **事件驱动架构**:Market → Signal → Order → Fill 四类事件驱动,回测与实盘共用同一套逻辑
 - **A 股规则内置**:T+1、最小 100 股、涨跌停、印花税 + 佣金
 - **组合级风控**:总敞口、单股敞口、持仓只数上限,自动降档或拒单
-- **多数据源**:AkShare / Tushare / 本地 CSV,内建 Parquet 缓存
+- **多数据源**:AkShare / Tushare / 本地 CSV,内建 SQLite 行情缓存
 - **日/分钟频**:`1d`、`1m`、`5m`、`15m`、`30m`、`60m`
 - **交易日历**:SSE 日历 + 会话窗口(09:30-11:30、13:00-15:00),自动过滤非交易时段
 - **性能指标**:Sharpe、Sortino、最大回撤、Calmar、胜率、盈利因子等 13 项
@@ -23,7 +23,7 @@
 ```
 alphaagent/
   core/         # 事件、事件总线、领域类型
-  data/         # 数据源适配 (AkShare/Tushare/CSV) + Parquet 缓存
+  data/         # 数据源适配 (AkShare/Tushare/CSV) + SQLite 行情缓存
   calendar/     # A 股交易日历
   strategy/     # 策略基类 + 内置样例
   portfolio/    # 持仓、现金、PnL、信号→订单 sizing
@@ -87,8 +87,11 @@ data:
   end: 2023-12-31
   freq: 1d                 # 1d | 1m | 5m | 15m | 30m | 60m
   adjust: qfq              # qfq | hfq | ""  (akshare/tushare only)
-  cache_dir: ./data/cache  # 启用 Parquet 本地缓存;留空则禁用
+  cache_dir: ./data/cache  # 启用行情缓存;留空则禁用
   # tushare_token: ""      # 或通过 TUSHARE_TOKEN 环境变量
+
+storage:
+  db_path: ./data/alphaagent.db   # 回测任务/行情缓存/交易日历统一入库;可被环境变量 ALPHAAGENT_DB 覆盖
 
 strategy:
   name: ma_cross
@@ -195,7 +198,20 @@ data:
 
 ### 缓存机制
 
-当 `cache_dir` 被设置时,`CachedDataSource` 会把每个 symbol 的行情落为 Parquet。后续回测只会请求 **缓存范围之外** 的时间段(头/尾增量),大幅减少网络调用。
+当 `data.cache_dir` 被设置时,引擎使用 `SqliteBarCache` 将行情以行级 `INSERT OR REPLACE` 写入统一 SQLite 数据库(`storage.db_path`,默认 `./data/alphaagent.db`)的 `bars` 表。后续回测只会请求**缓存范围之外**的时间段(头/尾增量),大幅减少网络调用。数据库路径也可通过环境变量 `ALPHAAGENT_DB` 覆盖。
+
+### 数据迁移
+
+已有旧版 Parquet 缓存(由 CLI 选股生成)可一次性导入 SQLite:
+
+```bash
+uv run python scripts/migrate_cache.py --cache-dir ./data/cache \
+    --calendar ./data/cache/ashare_calendar.parquet
+```
+
+脚本幂等(`INSERT OR REPLACE`),可重复跑;文件名中不含 `__source_id` 后缀的旧格式 Parquet 会被跳过并计数。
+
+**已知限制**:CLI 选股生成的 Parquet 以 `akshare-sina-qfq` 等 source_id 命名,API 回测使用的 source_id 命名可能不一致,迁移后的行不保证被 API 回测命中——必要时仍会联网补拉。
 
 ## 多策略组合
 
@@ -537,7 +553,7 @@ register("my_strategy", MyStrategy)  # 注册后 YAML 可直接用 name: my_stra
 ├─────────────────────────────────────────────────┤
 │  Risk │ Portfolio │ Order Mgmt │ Execution       │
 ├─────────────────────────────────────────────────┤
-│  Data Layer (行情,统一接口) + Parquet 缓存      │
+│  Data Layer (行情,统一接口) + SQLite 缓存        │
 ├─────────────────────────────────────────────────┤
 │  Brokers (AkShare / Tushare / CSV / [QMT/XTP])   │
 └─────────────────────────────────────────────────┘
@@ -556,6 +572,8 @@ alphaagent-api                       # 127.0.0.1:8000
 # 前端(独立终端)
 cd web && npm install && npm run dev # http://localhost:5173
 ```
+
+回测历史与结果已持久化到 SQLite:`alphaagent-api` 重启后 `GET /api/backtests` 仍可见历史任务;进程中断时未完成的任务自动标记为 `interrupted by restart`。
 
 主要模块:回测、策略库、**公司分析**(K 线 + 财务 + 多周期收益)、**行业分析**(涨跌排名/资金流/成分股)、**大盘**(指数 + 宽度 + 北向)、(规划中)选股、实盘监控。
 新增模块只需 `routers/<m>.py` + `pages/<m>/Index.vue` + 一条 router 记录,菜单自动出现。
@@ -577,7 +595,7 @@ ruff check alphaagent tests
 ## Roadmap
 
 - [x] 事件驱动核心 + A 股风控
-- [x] AkShare + Tushare 数据源 + Parquet 缓存
+- [x] AkShare + Tushare 数据源 + SQLite 行情缓存(支持 Parquet 迁移)
 - [x] 日/分钟频 + 交易日历过滤
 - [x] 13 项性能指标
 - [x] 多策略组合 + 独立子账户 + 每策略归因

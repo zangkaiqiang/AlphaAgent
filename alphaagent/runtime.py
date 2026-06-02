@@ -21,8 +21,8 @@ from alphaagent.config import (
 )
 from alphaagent.core.event_bus import EventBus
 from alphaagent.data.base import DataSource
-from alphaagent.data.cache import CachedDataSource
 from alphaagent.data.csv_source import CSVDataSource
+from alphaagent.data.sqlite_cache import SqliteBarCache
 from alphaagent.execution.base import ExecutionHandler
 from alphaagent.execution.broker_exec import BrokerExecutionHandler
 from alphaagent.execution.simulated import SimulatedExecutionHandler
@@ -38,6 +38,7 @@ from alphaagent.risk.portfolio_risk import (
     RiskRule,
 )
 from alphaagent.risk.sector_map import CSVSectorMap, DictSectorMap, SectorMap
+from alphaagent.storage.db import Database, get_database
 from alphaagent.strategy import registry
 from alphaagent.strategy.base import Strategy
 
@@ -76,7 +77,14 @@ def build_data_source(cfg: AppConfig) -> DataSource:
         raise ValueError(f"unknown data source: {cfg.data.source}")
 
     if cfg.data.cache_dir:
-        source = CachedDataSource(source, cfg.data.cache_dir, source_id_for_data_cfg(cfg.data))
+        # The DB is a server-level resource resolved uniformly via get_database()
+        # (ALPHAAGENT_DB / default) — same instance the job store and calendar use,
+        # so a single process never splits across two database files.
+        source = SqliteBarCache(
+            source,
+            get_database(),
+            source_id_for_data_cfg(cfg.data),
+        )
     return source
 
 
@@ -133,10 +141,12 @@ def build_agent(cfg: AgentConfig) -> Agent:
     return NullAgent()
 
 
-def build_calendar(cfg: CalendarConfig) -> AShareCalendar | None:
+def build_calendar(
+    cfg: CalendarConfig, db: Database | None = None
+) -> AShareCalendar | None:
     if not cfg.enabled:
         return None
-    return AShareCalendar(cache_path=cfg.cache_path)
+    return AShareCalendar(db=db, cache_path=cfg.cache_path)
 
 
 def build_execution(

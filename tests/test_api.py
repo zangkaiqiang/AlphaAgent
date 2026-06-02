@@ -15,11 +15,15 @@ from alphaagent.api.main import app
 
 
 @pytest.fixture(autouse=True)
-def _reset_jobs():
-    """Each test gets a fresh JobStore."""
+def _isolated_db(tmp_path, monkeypatch):
+    """Each test gets its own SQLite DB + a fresh JobStore."""
+    monkeypatch.setenv("ALPHAAGENT_DB", str(tmp_path / "test.db"))
+    from alphaagent.storage import db as _dbmod
+    _dbmod._INSTANCES.clear()
     get_job_store.cache_clear()
     yield
     get_job_store.cache_clear()
+    _dbmod._INSTANCES.clear()
 
 
 @pytest.fixture
@@ -137,3 +141,23 @@ def test_list_jobs_returns_submitted_ones(client, synthetic_data):
 def test_get_unknown_job_returns_404(client):
     r = client.get("/api/backtests/nonexistent")
     assert r.status_code == 404
+
+
+def test_jobs_survive_store_restart(client, synthetic_data):
+    import time as _t
+
+    from alphaagent.api.deps import get_job_store
+
+    cfg = _config(synthetic_data)
+    job_id = client.post("/api/backtests", json={"config": cfg}).json()["data"]["job_id"]
+    for _ in range(50):
+        info = client.get(f"/api/backtests/{job_id}").json()["data"]
+        if info["status"] in ("completed", "failed"):
+            break
+        _t.sleep(0.05)
+    assert info["status"] == "completed"
+
+    # Drop the cached store; a new one must hydrate the finished job from SQLite.
+    get_job_store.cache_clear()
+    listed = client.get("/api/backtests").json()["data"]
+    assert job_id in {j["id"] for j in listed}
