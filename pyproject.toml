@@ -42,7 +42,6 @@ api = [
 ]
 
 [project.scripts]
-alphaagent = "alphaagent.cli:main"
 alphaagent-api = "alphaagent.api.main:run"
 
 [build-system]

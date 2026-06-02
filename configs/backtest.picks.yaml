@@ -1,0 +1,47 @@
+data:
+  source: akshare
+  symbols:
+    - '002179'  # 中航光电
+    - '300628'  # 亿联网络
+    - '600023'  # 浙能电力
+    - '600875'  # 东方电气
+    - '000338'  # 潍柴动力
+    - '600522'  # 中天科技
+    - '600027'  # 华电国际
+    - '600482'  # 中国动力
+    - '600460'  # 士兰微
+    - '300433'  # 蓝思科技
+    - '000630'  # 铜陵有色
+    - '000938'  # 紫光股份
+    - '002600'  # 领益智造
+    - '600176'  # 中国巨石
+    - '600150'  # 中国船舶
+    - '601838'  # 成都银行
+    - '601698'  # 中国卫通
+    - '600066'  # 宇通客车
+    - '600845'  # 宝信软件
+    - '600406'  # 国电南瑞
+  start: '2025-05-13'
+  end: '2026-05-13'
+  freq: 1d
+  adjust: qfq
+  cache_dir: ./data/cache
+  akshare_backend: sina
+calendar:
+  enabled: true
+  cache_path: ./data/cache/ashare_calendar.parquet
+strategy:
+  name: xs_momentum
+  params:
+    lookback: 60
+    top_n: 3
+    rebalance_days: 20
+portfolio:
+  initial_cash: 1000000
+  target_pct: 0.33
+  commission_rate: 0.0003
+  min_commission: 5.0
+  stamp_tax_rate: 0.001
+execution:
+  backend: simulated
+  slippage_bps: 5
