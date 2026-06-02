@@ -1,21 +1,10 @@
-"""Reusable builder helpers for screener components.
+"""Reusable builder helpers for screener components, used by the API routes.
 
-Used by both the CLI (``alphaagent.cli``) and the API routes.
-The old private copies in ``cli.py`` are replaced by these public functions.
-
-Key difference from the old CLI helpers
-----------------------------------------
 ``build_screen_data_source`` wraps the upstream with ``SqliteBarCache``
-(via ``get_database()`` + ``source_id_for_data_cfg``) instead of the
-Parquet ``CachedDataSource`` used by the original ``_build_screen_data_source``
-in ``cli.py``.  This aligns the screener cache with the API / runtime data
-path so both share the same SQLite store and the same source-ID convention:
-``{source}_{freq}_{adjust}``  (from ``runtime.source_id_for_data_cfg``).
-
-The old CLI used a different ID scheme
-(``akshare-{backend}-{adjust}``, ``tushare-{adjust}``) which would have
-mixed up rows had both the backtest API and the screener CLI ever shared a
-cache file. The new scheme is consistent.
+(via ``get_database()`` + ``source_id_for_data_cfg``), so the screener cache
+shares the same SQLite store and source-ID convention as the backtest /
+runtime data path: ``{source}_{freq}_{adjust}`` (from
+``runtime.source_id_for_data_cfg``).
 """
 
 from __future__ import annotations

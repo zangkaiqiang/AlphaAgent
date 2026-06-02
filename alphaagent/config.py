@@ -18,7 +18,7 @@ class DataConfig(BaseModel):
     freq: str = "1d"  # 1d | 1m | 5m | 15m | 30m | 60m
     adjust: str = "qfq"  # qfq | hfq | "" (akshare/tushare)
     tushare_token: str | None = None  # or via TUSHARE_TOKEN env
-    cache_dir: str | None = None  # enables CachedDataSource when set
+    cache_dir: str | None = None  # enables the SQLite bar cache when set
     # akshare-only: which upstream to use for daily bars.
     # Switch to "sina" if eastmoney is unreachable from your network.
     akshare_backend: str = "eastmoney"

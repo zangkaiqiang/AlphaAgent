@@ -15,7 +15,7 @@
 - **多策略组合**:并行运行多个策略,独立子账户,按权重分配资金,含每策略 PnL 归因
 - **Agent 层可开关**:通过配置启用 LLM 选股/调参,默认关闭
 - **券商对接**:`simulated` 回测 / `paper` 模拟实盘(次 bar 开盘成交)/ `qmt` 真实盘(miniQMT)
-- **选股工作流**:独立 CLI(`alphaagent screen`),指数成分股 + 6 条技术规则 → 候选清单 yaml → 人工审核 → 喂回测
+- **选股工作流**:Web 选股页(`选股`),指数成分股 + 6 条技术规则 → 候选清单 → 人工审核 → 喂回测
 - **自动化调度**:APScheduler 驱动的定时任务
 
 ## 目录结构
@@ -34,7 +34,7 @@ alphaagent/
   agent/        # 可选 LLM Agent 层
   scheduler/    # 自动化调度
   config.py     # 全局配置 (pydantic + YAML)
-  cli.py        # 命令行入口
+  api/          # FastAPI routers (后端入口 alphaagent-api)
 strategies/     # 用户策略目录
 configs/        # YAML 配置
 tests/
@@ -42,36 +42,30 @@ tests/
 
 ## 快速开始
 
+> **注意**:CLI 命令模式(`alphaagent backtest` / `alphaagent screen` 等)已移除。项目现在通过 **Web 应用**运行——后端 `alphaagent-api` + 前端 `web/`。
+
 ```bash
-pip install -e ".[data,dev]"
-alphaagent backtest --config configs/example.yaml
+# 1. 安装依赖
+uv sync --extra data --extra api
+
+# 2. 启动后端 (127.0.0.1:8000)
+alphaagent-api
+# 或
+uv run python main.py
+
+# 3. 启动前端(新终端)
+cd web && npm install && npm run dev   # http://localhost:5173
 ```
 
-输出示例:
+打开浏览器访问 `http://localhost:5173`,在 **回测** 页面选择策略和配置,点击「运行」即可。回测结果持久化到 SQLite,重启后 `GET /api/backtests` 仍可见历史任务。
 
-```
-Agent: NullAgent (enabled=False)
-Calendar: off  Freq: 1d
-Initial: 1,000,000.00
-Final:   1,015,874.15
-Bars:    processed=240 skipped=0
-Fills:   13
+**Python 编程 API**(直接调用引擎,无需启动服务):
 
-Performance
------------
-Total Return:          1.59%
-Annualized Return:     3.25%
-Annualized Vol:        4.02%
-Sharpe:                 0.82
-Sortino:                0.69
-Max Drawdown:         -1.24%
-Calmar:                 2.62
-Trades:                    6
-Win Rate:             16.67%
-Avg Win:             8953.69
-Avg Loss:           -1502.29
-Profit Factor:          1.19
-Total PnL:           1442.26
+```python
+from alphaagent.backtest import BacktestEngine
+# ... 配置 feed / strategy / portfolio / execution / event_bus
+result = engine.run()
+print(result.performance().sharpe)
 ```
 
 ## 配置
@@ -211,7 +205,7 @@ uv run python scripts/migrate_cache.py --cache-dir ./data/cache \
 
 脚本幂等(`INSERT OR REPLACE`),可重复跑;文件名中不含 `__source_id` 后缀的旧格式 Parquet 会被跳过并计数。
 
-**已知限制**:CLI 选股生成的 Parquet 以 `akshare-sina-qfq` 等 source_id 命名,API 回测使用的 source_id 命名可能不一致,迁移后的行不保证被 API 回测命中——必要时仍会联网补拉。
+**已知限制**:旧版 screener 生成的 Parquet 以 `akshare-sina-qfq` 等 source_id 命名,API 回测使用的 source_id 命名可能不一致,迁移后的行不保证被 API 回测命中——必要时仍会联网补拉。
 
 ## 多策略组合
 
@@ -271,11 +265,7 @@ for sid, perf in result.performance_by_strategy().items():
 
 ## 内置策略库
 
-查看所有已注册策略:
-
-```bash
-alphaagent list-strategies
-```
+在 Web 应用的 **`策略库`** 页面查看所有已注册策略,或通过 `GET /api/strategies` 接口获取完整列表。
 
 | 名称 | 类别 | 核心逻辑 | 典型特征 |
 |---|---|---|---|
@@ -409,12 +399,14 @@ risk:
 
 **仅限制 BUY**:SELL 一律放行(减仓永远不增加敞口)。多规则取**最小值**,并向下取整到 100 股倍数。
 
-CLI 运行时会打印 `downsized` 和 `rejected` 计数,一眼看出哪些规则在生效:
+回测完成后,API 返回的结果中包含 `downsized` 和 `rejected` 计数,一眼看出哪些规则在生效:
 
-```
-Risk rules: ['max_gross_exposure', 'max_per_symbol_exposure']
-Fills:   6
-Risk:    downsized=3 rejected=0
+```json
+{
+  "risk_rules": ["max_gross_exposure", "max_per_symbol_exposure"],
+  "fills": 6,
+  "risk": { "downsized": 3, "rejected": 0 }
+}
 ```
 
 **多策略模式下**,风控看的是**全部子账户合计**的敞口 — 两个策略同时买入同一只股票会触发单股上限,而不是每个子账户单独计算。
@@ -439,13 +431,25 @@ engine = BacktestEngine(feed, strategy, portfolio, execution, bus, risk_manager=
 
 ## 选股工作流
 
-选股跟回测**完全解耦** — 离线产出候选清单 yaml,人工审核后把 symbols 复制到 `strategy.yaml` 跑回测。详细设计见 [docs/screener-design.md](docs/screener-design.md)。
+选股跟回测**完全解耦** — 通过 Web 应用或 HTTP API 产出候选清单,人工审核后把 symbols 填入回测配置。详细设计见 [docs/screener-design.md](docs/screener-design.md)。
+
+**Web 操作流程**:在 **`选股`** 页面配置 universe/过滤器/规则,点击「运行选股」,等待异步任务完成后查看候选清单和评分详情。
+
+**HTTP API 操作流程**:
 
 ```bash
-alphaagent screen --config configs/screen.example.yaml -o picks.yaml
-alphaagent list-screen-rules               # 看所有内置规则和过滤器
-alphaagent screen -c ... --dry-run         # 校验配置不拉数据
-alphaagent screen -c ... --replay picks.yaml -o picks_v2.yaml   # 用快照重跑
+# 查看所有内置规则和过滤器
+GET /api/screeners/rules
+
+# 提交选股任务
+POST /api/screeners
+# Body: configs/screen.example.yaml 对应的 JSON
+
+# 查询任务状态
+GET /api/screeners/{id}
+
+# 获取候选结果
+GET /api/screeners/{id}/result
 ```
 
 [configs/screen.example.yaml](configs/screen.example.yaml) 的核心配置:
@@ -479,33 +483,39 @@ rules:                         # 打分规则,权重自动归一化
 
 权重自动归一化(`0.4+0.2+0.2+0.2` ≡ `4+2+2+2`),数据缺失的规则从分母扣除。
 
-### 输出 picks.yaml
+### 选股结果结构
 
-```yaml
-metadata:
-  resolved_as_of: 2024-12-30          # 自动规整后的真实交易日
-  universe: akshare_index:000300
-  universe_size: 300
-  filtered_size: 240
-  universe_snapshot: ["000001", "000002", ...]   # 全部成分股,供 --replay 复现
-symbols:                              # 直接复制到 strategy.yaml 的 data.symbols
-  - "600519"
-  - "000858"
-candidates:                           # 详细评分,供人工审核
-  - symbol: "600519"
-    name: "贵州茅台"
-    final_score: 0.873
-    reasons:
-      - { rule: momentum, score: 0.95, detail: { return_60d: 0.185 } }
-      - { rule: above_ma, score: 1.0, detail: { close: 1620.5, ma60: 1502.3 } }
+`GET /api/screeners/{id}/result` 返回 JSON(`ScreenResultDTO`):
+
+```json
+{
+  "generated_at": "2024-12-31",
+  "resolved_as_of": "2024-12-30",
+  "universe_name": "akshare_index:000300",
+  "universe_size": 300,
+  "filtered_size": 240,
+  "rules_applied": ["momentum (weight=0.40)", "above_ma (weight=0.20)"],
+  "symbols": ["600519", "000858"],
+  "picks": [
+    {
+      "symbol": "600519",
+      "name": "贵州茅台",
+      "final_score": 0.873,
+      "reasons": [
+        { "rule_name": "momentum", "score": 0.95, "detail": { "return_60d": 0.185 } },
+        { "rule_name": "above_ma", "score": 1.0, "detail": { "close": 1620.5, "ma60": 1502.3 } }
+      ],
+      "metadata": { "industry": "白酒", "list_date": "2001-08-27" }
+    }
+  ]
+}
 ```
 
-`output.with_reasons` 三档:`full`(完整理由)/ `compact`(只保留最高分规则)/ `none`(只输出 symbols 列表)。
-`output.format` 支持 `yaml` 和 `csv`(Excel 友好)。
+`symbols` 是前 `output.top_n` 名,可直接填入回测的 `data.symbols`;`picks` 含完整评分理由供人工审核。前端「选股」页直接渲染该结构。
 
 ### 人工审核 checklist
 
-复制 `picks.yaml` 的 `symbols` 到 `strategy.yaml` 之前,过一遍:
+从选股结果取出 `symbols` 填入回测配置之前,过一遍:
 
 1. **行业集中度** — 30 只里有 15 只白酒?手动剔除一些
 2. **市值分布** — 是否过度偏向某个风格
@@ -566,8 +576,9 @@ register("my_strategy", MyStrategy)  # 注册后 YAML 可直接用 name: my_stra
 
 ```bash
 # 后端
-pip install -e ".[api]"
+uv sync --extra api
 alphaagent-api                       # 127.0.0.1:8000
+# 或 uv run python main.py
 
 # 前端(独立终端)
 cd web && npm install && npm run dev # http://localhost:5173
@@ -575,7 +586,7 @@ cd web && npm install && npm run dev # http://localhost:5173
 
 回测历史与结果已持久化到 SQLite:`alphaagent-api` 重启后 `GET /api/backtests` 仍可见历史任务;进程中断时未完成的任务自动标记为 `interrupted by restart`。
 
-主要模块:回测、策略库、**公司分析**(K 线 + 财务 + 多周期收益)、**行业分析**(涨跌排名/资金流/成分股)、**大盘**(指数 + 宽度 + 北向)、(规划中)选股、实盘监控。
+主要模块:回测、策略库、**选股**、**公司分析**(K 线 + 财务 + 多周期收益)、**行业分析**(涨跌排名/资金流/成分股)、**大盘**(指数 + 宽度 + 北向)、(规划中)实盘监控。
 新增模块只需 `routers/<m>.py` + `pages/<m>/Index.vue` + 一条 router 记录,菜单自动出现。
 详见 [`web/README.md`](./web/README.md)。
 
@@ -587,9 +598,9 @@ cd web && npm install && npm run dev # http://localhost:5173
 ## 开发
 
 ```bash
-pip install -e ".[data,dev,api]"
-pytest -q
-ruff check alphaagent tests
+uv sync --extra data --extra dev --extra api
+uv run pytest -q
+uv run ruff check alphaagent tests
 ```
 
 ## Roadmap
@@ -602,8 +613,8 @@ ruff check alphaagent tests
 - [x] 策略库:MA Cross / RSI / Bollinger × 2 / 截面动量
 - [x] 组合级风控(总敞口、单股、只数、板块集中度、相关性)
 - [x] 券商对接:PaperBroker 模拟盘 + QMT 实盘骨架
-- [x] 选股(screener)pipeline + CLI
-- [x] FastAPI Web API + Vue 3 前端骨架(回测页面 + sidebar)
+- [x] 选股(screener)pipeline + Web 选股页 + HTTP API
+- [x] FastAPI Web API + Vue 3 前端(回测 / 策略库 / 选股 + sidebar);CLI 命令模式已移除,项目 Web-only
 - [x] 公司分析(K 线 + 财务指标 + 多窗口收益)
 - [x] 行业分析(涨跌排名 + 资金流 + 成分股下钻)
 - [x] 大盘 dashboard(指数 + 市场宽度 + 北向资金)
