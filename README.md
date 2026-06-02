@@ -543,10 +543,28 @@ register("my_strategy", MyStrategy)  # 注册后 YAML 可直接用 name: my_stra
 └─────────────────────────────────────────────────┘
 ```
 
+## Web 前端
+
+`web/` 是 Vue 3 + Element Plus 单页应用,通过 FastAPI(`alphaagent.api`)与核心引擎通信。
+单机启动:
+
+```bash
+# 后端
+pip install -e ".[api]"
+alphaagent-api                       # 127.0.0.1:8000
+
+# 前端(独立终端)
+cd web && npm install && npm run dev # http://localhost:5173
+```
+
+主要模块:回测 / 策略库 /(规划中)选股、公司分析、行业分析、大盘、实盘监控。
+新增模块只需 `routers/<m>.py` + `pages/<m>/Index.vue` + 一条 router 记录,菜单自动出现。
+详见 [`web/README.md`](./web/README.md)。
+
 ## 开发
 
 ```bash
-pip install -e ".[data,dev]"
+pip install -e ".[data,dev,api]"
 pytest -q
 ruff check alphaagent tests
 ```
@@ -561,8 +579,11 @@ ruff check alphaagent tests
 - [x] 策略库:MA Cross / RSI / Bollinger × 2 / 截面动量
 - [x] 组合级风控(总敞口、单股、只数、板块集中度、相关性)
 - [x] 券商对接:PaperBroker 模拟盘 + QMT 实盘骨架
+- [x] 选股(screener)pipeline + CLI
+- [x] FastAPI Web API + Vue 3 前端骨架(回测页面 + sidebar)
+- [ ] 公司分析 / 行业分析 / 大盘 三大分析模块
+- [ ] 实盘监控页面
 - [ ] XTP 实盘接入
 - [ ] QMT 生产化(对账、重连、订单状态轮询)
-- [ ] 实盘券商对接(QMT / XTP)
 - [ ] 分红/送股除权事件流
 - [ ] LLM Agent 决策链路接入

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -19,6 +20,8 @@ from alphaagent.portfolio.portfolio import Portfolio
 from alphaagent.risk.portfolio_risk import PortfolioRiskManager
 from alphaagent.strategy.base import Strategy, StrategyContext
 
+ProgressCallback = Callable[[int, int], None]
+
 PortfolioLike = Portfolio | MultiStrategyPortfolio
 
 
@@ -30,6 +33,7 @@ class BacktestResult:
     fills: list[FillEvent] = field(default_factory=list)
     bars_processed: int = 0
     bars_skipped: int = 0
+    cancelled: bool = False
     # Per-strategy equity curves, keyed by strategy_id. Empty for single-strategy runs.
     equity_by_strategy: dict[str, list[tuple[datetime, float]]] = field(default_factory=dict)
 
@@ -88,6 +92,9 @@ class BacktestEngine:
         event_bus: EventBus,
         calendar: AShareCalendar | None = None,
         risk_manager: PortfolioRiskManager | None = None,
+        progress_callback: ProgressCallback | None = None,
+        progress_every: int = 50,
+        should_cancel: Callable[[], bool] | None = None,
     ):
         """Wires the event-driven engine.
 
@@ -109,9 +116,13 @@ class BacktestEngine:
         self.event_bus = event_bus
         self.calendar = calendar
         self.risk_manager = risk_manager
+        self.progress_callback = progress_callback
+        self.progress_every = max(1, int(progress_every))
+        self.should_cancel = should_cancel
         self._fills: list[FillEvent] = []
         self._bars_processed = 0
         self._bars_skipped = 0
+        self._cancelled = False
 
         self._validate()
 
@@ -173,14 +184,24 @@ class BacktestEngine:
         for strategy in self.strategies:
             strategy.on_start()
         for bar in self.feed:
+            if self.should_cancel is not None and self.should_cancel():
+                self._cancelled = True
+                break
             if not self._accept_bar(bar):
                 self._bars_skipped += 1
                 continue
             self._bars_processed += 1
             self.event_bus.put(MarketEvent(bar=bar))
             self.event_bus.dispatch()
+            if (
+                self.progress_callback is not None
+                and self._bars_processed % self.progress_every == 0
+            ):
+                self.progress_callback(self._bars_processed, len(self._fills))
         for strategy in self.strategies:
             strategy.on_finish()
+        if self.progress_callback is not None:
+            self.progress_callback(self._bars_processed, len(self._fills))
 
         equity_by_strategy: dict[str, list[tuple[datetime, float]]] = {}
         if isinstance(self.portfolio, MultiStrategyPortfolio):
@@ -195,5 +216,6 @@ class BacktestEngine:
             fills=list(self._fills),
             bars_processed=self._bars_processed,
             bars_skipped=self._bars_skipped,
+            cancelled=self._cancelled,
             equity_by_strategy=equity_by_strategy,
         )
