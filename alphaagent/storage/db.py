@@ -73,7 +73,11 @@ class Database:
             self._conn.commit()
 
     def query(self, sql: str, params: tuple = ()) -> list[sqlite3.Row]:
-        return self._conn.execute(sql, params).fetchall()
+        # Use an explicit cursor (not the connection's implicit one) so concurrent
+        # backtest worker threads reading via the shared connection don't contend
+        # on a single cursor. Safe lock-free under WAL.
+        cur = self._conn.cursor()
+        return cur.execute(sql, params).fetchall()
 
     def query_df(self, sql: str, params: tuple = ()) -> pd.DataFrame:
         return pd.read_sql_query(sql, self._conn, params=params)
