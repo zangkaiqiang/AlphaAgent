@@ -33,10 +33,12 @@ def _f(x) -> float | None:
 
 
 def upsert_bars(
-    db: Database, source_id: str, symbol: str, freq: str, df: pd.DataFrame
+    db: Database, source_id: str, symbol: str, freq: str, df: pd.DataFrame | None
 ) -> None:
     if df is None or df.empty:
         return
+    # NOTE: timestamps are stored via isoformat() assuming tz-naive bars (daily
+    # AKShare data). Revisit normalisation if tz-aware intraday bars are added.
     rows = [
         (
             source_id, symbol, freq, pd.Timestamp(ts).isoformat(),
@@ -56,7 +58,9 @@ class SqliteBarCache(DataSource):
         self.db = db
         self.source_id = source_id
 
-    def _bounds(self, symbol: str, freq: str):
+    def _bounds(
+        self, symbol: str, freq: str
+    ) -> tuple[pd.Timestamp, pd.Timestamp] | None:
         row = self.db.query(
             "SELECT MIN(dt) AS lo, MAX(dt) AS hi FROM bars "
             "WHERE source_id=? AND symbol=? AND freq=?",
@@ -73,8 +77,8 @@ class SqliteBarCache(DataSource):
             "ORDER BY dt",
             (self.source_id, symbol, freq, start_ts.isoformat(), end_ts.isoformat()),
         )
-        if df.empty:
-            return df
+        # Always index by datetime (even when empty) so the returned shape is
+        # consistent for callers that inspect df.index.
         df.index = pd.to_datetime(df.pop("dt"))
         return df
 
