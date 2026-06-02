@@ -122,5 +122,6 @@ async def watch_job(
             if job.status in TERMINAL:
                 break
             await asyncio.sleep(0.2)
+        await websocket.close(code=1000)
     except WebSocketDisconnect:
         pass

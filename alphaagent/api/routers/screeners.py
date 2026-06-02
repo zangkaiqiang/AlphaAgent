@@ -22,6 +22,7 @@ from alphaagent.api.deps import get_job_store
 from alphaagent.api.envelope import err, ok
 from alphaagent.api.job_store import TERMINAL, Job, JobStore
 from alphaagent.api.runner_screen import run_screen_job
+from alphaagent.api.schemas.backtest import JobStatus
 from alphaagent.api.schemas.screener import ScreenJobInfo, ScreenSubmitRequest
 from alphaagent.screener.filters import BUILTIN_FILTERS
 from alphaagent.screener.rules_builtin import BUILTIN_ABSOLUTE_RULES, BUILTIN_XS_RULES
@@ -140,8 +141,6 @@ def get_screen_job_result(
         raise HTTPException(404, detail=err("JOB_NOT_FOUND", f"job {job_id} not found"))
     if job.status not in TERMINAL:
         raise HTTPException(400, detail=err("JOB_NOT_DONE", f"job is {job.status}"))
-    from alphaagent.api.schemas.backtest import JobStatus
-
     if job.status == JobStatus.FAILED:
         raise HTTPException(400, detail=err("JOB_FAILED", job.error or "failed"))
     return ok(job.result)
@@ -186,5 +185,6 @@ async def watch_screen_job(
             if job.status in TERMINAL:
                 break
             await asyncio.sleep(0.2)
+        await websocket.close(code=1000)
     except WebSocketDisconnect:
         pass
