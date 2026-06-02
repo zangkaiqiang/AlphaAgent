@@ -23,7 +23,6 @@ from alphaagent.core.event_bus import EventBus
 from alphaagent.data.base import DataSource
 from alphaagent.data.csv_source import CSVDataSource
 from alphaagent.data.sqlite_cache import SqliteBarCache
-from alphaagent.storage.db import Database, get_database
 from alphaagent.execution.base import ExecutionHandler
 from alphaagent.execution.broker_exec import BrokerExecutionHandler
 from alphaagent.execution.simulated import SimulatedExecutionHandler
@@ -39,6 +38,7 @@ from alphaagent.risk.portfolio_risk import (
     RiskRule,
 )
 from alphaagent.risk.sector_map import CSVSectorMap, DictSectorMap, SectorMap
+from alphaagent.storage.db import Database, get_database
 from alphaagent.strategy import registry
 from alphaagent.strategy.base import Strategy
 
