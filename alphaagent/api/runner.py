@@ -83,7 +83,9 @@ def _run(job: Job, cfg: AppConfig) -> BacktestResult:
         cfg.portfolio.stamp_tax_rate,
         event_bus,
     )
-    calendar = build_calendar(cfg.calendar)
+    from alphaagent.storage.db import get_database
+
+    calendar = build_calendar(cfg.calendar, get_database(cfg.storage.db_path))
     risk_manager = build_risk_manager(cfg.risk, portfolio)
 
     def on_progress(bars_processed: int, fill_count: int) -> None:
