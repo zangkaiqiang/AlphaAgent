@@ -92,19 +92,6 @@ class MarketSnapshotDTO(BaseModel):
     northbound_net: float | None = None
 
 
-class CompanyAnalysisDTO(BaseModel):
-    symbol: str
-    generated_at: str
-    rating: str
-    confidence: float | None = None
-    summary: str
-    reasons: list[str]
-    risks: list[str]
-    model: str
-    disclaimer: str
-    data_complete: bool | None = None
-
-
 class SourceDTO(BaseModel):
     id: int
     type: str

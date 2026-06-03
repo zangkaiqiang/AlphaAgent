@@ -20,7 +20,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from alphaagent.agent.company_analyst import AgentNotConfigured
 from alphaagent.analytics.company import rolling_return
-from alphaagent.analytics.company_agent import DataUnavailable
 from alphaagent.api.deps import (
     get_fundamentals_provider,
     get_kline_data_source,
@@ -152,7 +151,7 @@ def get_overview(
     return ok(overview.model_dump(mode="json"))
 
 
-def _report_to_dto(report: Any) -> ResearchReportDTO:
+def _report_to_dto(report: Any, model: str = "") -> ResearchReportDTO:
     return ResearchReportDTO(
         symbol=report.symbol,
         generated_at=report.generated_at,
@@ -163,6 +162,7 @@ def _report_to_dto(report: Any) -> ResearchReportDTO:
         disclaimer=report.disclaimer,
         data_complete=report.data_complete,
         notes=list(report.notes),
+        model=model,
     )
 
 
@@ -202,18 +202,16 @@ def company_agent_analysis(
 ):
     db = get_database()
     bar_source = SqliteBarCache(upstream, db, "akshare_1d_qfq")
+    model_name = getattr(analyst, "model", "")
     try:
         report = analyst.analyze(symbol, bar_source=bar_source, provider=provider,
                                  news_provider=news_provider, db=db)
     except AgentNotConfigured as e:
         raise HTTPException(400, detail=err("AGENT_NOT_CONFIGURED", str(e))) from e
-    except DataUnavailable as e:
-        raise HTTPException(502, detail=err("DATA_UNAVAILABLE", str(e))) from e
     except Exception as e:
         raise HTTPException(502, detail=err("AGENT_FAILED", f"{type(e).__name__}: {e}")) from e
-    dto = _report_to_dto(report)
-    _persist_report(db, str(uuid.uuid4()), report, analyst.model if hasattr(analyst, "model") else "")
-    return ok(dto.model_dump(mode="json"))
+    _persist_report(db, str(uuid.uuid4()), report, model_name)
+    return ok(_report_to_dto(report, model_name).model_dump(mode="json"))
 
 
 @router.get("/{symbol}/agent/history")

@@ -38,6 +38,8 @@ class _Provider(FundamentalsProvider):
 
 
 class _StubAnalyst:
+    model = "stub-model"
+
     def analyze(self, symbol, *, bar_source, provider, news_provider, db):
         return ResearchReport(
             symbol=symbol, generated_at="2026-06-03T00:00:00", rating="BUY",
@@ -80,8 +82,10 @@ def test_report_and_history(client):
     assert d["sections"][0]["title"] == "基本面"
     assert d["sources"][0]["id"] == 1
     assert d["disclaimer"]
+    assert d["model"] == "stub-model"  # populated from analyst.model (the Important fix)
     h = client.get("/api/analysis/company/600000/agent/history").json()["data"]
     assert len(h) >= 1 and h[0]["symbol"] == "600000"
+    assert h[0]["report"] is not None and h[0]["report"]["rating"] == "BUY"
 
 
 def test_not_configured_400(client):

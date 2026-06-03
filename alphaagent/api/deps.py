@@ -39,14 +39,6 @@ def get_kline_data_source() -> DataSource:
     return AkShareDataSource(adjust="qfq")
 
 
-def get_company_analyst():
-    """Company-analysis LLM agent. Overridable in tests via dependency_overrides."""
-    from alphaagent.agent.company_analyst import CompanyAnalyst
-
-    model = os.environ.get("ALPHAAGENT_AGENT_MODEL", "claude-sonnet-4-6")
-    return CompanyAnalyst(model=model)
-
-
 def get_news_provider():
     """News provider for the research analyst. Overridable in tests."""
     from alphaagent.fundamentals.news import AkShareNewsProvider

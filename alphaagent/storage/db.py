@@ -61,7 +61,8 @@ CREATE TABLE IF NOT EXISTS company_analysis (
     reasons_json TEXT,
     risks_json TEXT,
     model TEXT,
-    context_json TEXT
+    context_json TEXT,
+    report_json TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_company_analysis_symbol
     ON company_analysis(symbol, generated_at);
