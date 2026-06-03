@@ -239,7 +239,11 @@ class ResearchAnalyst:
                      "source": item.source, "url": item.url},
                 )
                 sources_out.append({"id": sid, "label": item.title or url_key})
-                news_out.append({"title": item.title, "date": item.date, "url": item.url})
+                # Include source so the model can tell company-specific news from
+                # market-wide fallback items (labeled 全球财经快讯（市场）) and
+                # attribute citations accurately.
+                news_out.append({"title": item.title, "date": item.date,
+                                 "source": item.source, "url": item.url})
             return {"news": news_out, "sources": sources_out}
 
         # -----------------------------------------------------------------

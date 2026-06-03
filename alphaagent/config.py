@@ -19,9 +19,11 @@ class DataConfig(BaseModel):
     adjust: str = "qfq"  # qfq | hfq | "" (akshare/tushare)
     tushare_token: str | None = None  # or via TUSHARE_TOKEN env
     cache_dir: str | None = None  # enables the SQLite bar cache when set
-    # akshare-only: which upstream to use for daily bars.
-    # Switch to "sina" if eastmoney is unreachable from your network.
-    akshare_backend: str = "eastmoney"
+    # akshare-only: which upstream to use for daily bars ("sina" | "eastmoney").
+    # Unset -> resolved from ALPHAAGENT_AKSHARE_BACKEND env, else "sina" default
+    # (eastmoney push servers are frequently unreachable). See
+    # alphaagent.data.akshare_source.resolve_daily_backend.
+    akshare_backend: str | None = None
 
 
 class CalendarConfig(BaseModel):

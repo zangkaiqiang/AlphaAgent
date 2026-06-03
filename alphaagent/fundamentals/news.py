@@ -51,11 +51,34 @@ def _retry(producer, *, attempts: int = 3, base_delay: float = 0.6):
     raise last
 
 
+# Label applied to fallback market-wide items so the research agent attributes
+# them as market context rather than company-specific news.
+MARKET_NEWS_SOURCE = "全球财经快讯（市场）"
+
+
 class AkShareNewsProvider(NewsProvider):
+    """Per-symbol news via ``stock_news_em`` (eastmoney).
+
+    That endpoint currently fails to parse on some akshare/pandas combos
+    (ArrowInvalid) and is also proxy-sensitive. When it yields nothing we fall
+    back to market-wide 资讯 (``stock_info_global_em``), clearly labeled so the
+    report doesn't misattribute it to the company. Never raises — returns ``[]``
+    when nothing is reachable.
+    """
+
     def recent_news(self, symbol: str, limit: int = 10) -> list[NewsItem]:
+        items = self._symbol_news(symbol, limit)
+        if items:
+            return items
+        return self._market_news(limit)
+
+    def _symbol_news(self, symbol: str, limit: int) -> list[NewsItem]:
         import akshare as ak
 
-        df = _retry(lambda: ak.stock_news_em(symbol=symbol))
+        try:
+            df = _retry(lambda: ak.stock_news_em(symbol=symbol))
+        except Exception:
+            return []
         if df is None or df.empty:
             return []
         out: list[NewsItem] = []
@@ -71,5 +94,33 @@ class AkShareNewsProvider(NewsProvider):
             )
         return out
 
+    def _market_news(self, limit: int) -> list[NewsItem]:
+        import akshare as ak
 
-__all__ = ["NewsItem", "NewsProvider", "StaticNewsProvider", "AkShareNewsProvider"]
+        try:
+            df = _retry(lambda: ak.stock_info_global_em())
+        except Exception:
+            return []
+        if df is None or df.empty:
+            return []
+        out: list[NewsItem] = []
+        for _, r in df.head(limit).iterrows():
+            out.append(
+                NewsItem(
+                    title=str(r.get("标题") or "") or "",
+                    date=str(r.get("发布时间") or "") or None,
+                    source=MARKET_NEWS_SOURCE,
+                    url=str(r.get("链接") or "") or None,
+                    summary=str(r.get("摘要") or "")[:300] or None,
+                )
+            )
+        return out
+
+
+__all__ = [
+    "NewsItem",
+    "NewsProvider",
+    "StaticNewsProvider",
+    "AkShareNewsProvider",
+    "MARKET_NEWS_SOURCE",
+]

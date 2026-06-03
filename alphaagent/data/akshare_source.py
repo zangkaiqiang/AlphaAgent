@@ -5,18 +5,20 @@ with ``pip install alphaagent[data]`` to enable.
 
 Supported freqs: ``1d`` (daily), ``1m`` / ``5m`` / ``15m`` / ``30m`` / ``60m``.
 
-Daily bars can come from one of two upstreams:
-- ``eastmoney`` (default): full OHLCV+amount, but the eastmoney push servers
-  are sometimes unreachable from outside CN or rate-limit aggressively.
-- ``sina``: alternative source via ``stock_zh_a_daily``. No ``amount`` column
-  natively, so we synthesize it as ``close * volume * 100`` (volume is in
-  100-share lots from sina's response). Use this when eastmoney is blocked.
+Daily bars can come from one of two upstreams (see ``resolve_daily_backend``):
+- ``sina`` (default): via ``stock_zh_a_daily``. No ``amount`` column natively,
+  so we synthesize it as ``close * volume``. Reachable when the eastmoney push
+  servers are dropped by a local proxy or blocked from non-CN exit IPs.
+- ``eastmoney``: full OHLCV+amount via ``stock_zh_a_hist``, but the
+  push2*.eastmoney.com servers are frequently unreachable. Opt in with
+  ``ALPHAAGENT_AKSHARE_BACKEND=eastmoney`` or config ``data.akshare_backend``.
 
 Minute bars only support eastmoney (sina has no equivalent in akshare).
 """
 
 from __future__ import annotations
 
+import os
 from datetime import date, datetime, time
 from typing import Literal
 
@@ -28,6 +30,28 @@ _MINUTE_PERIODS = {"1m": "1", "5m": "5", "15m": "15", "30m": "30", "60m": "60"}
 
 DailyBackend = Literal["eastmoney", "sina"]
 
+# Default to sina: the eastmoney push servers (push2*.eastmoney.com) are
+# routinely dropped by local proxies / blocked from non-CN exit IPs, while
+# sina's daily endpoint stays reachable. Override per-process with
+# ALPHAAGENT_AKSHARE_BACKEND, or explicitly via config / constructor arg.
+_DEFAULT_DAILY_BACKEND: DailyBackend = "sina"
+
+
+def resolve_daily_backend(explicit: str | None = None) -> DailyBackend:
+    """Resolve the daily-bar upstream: explicit arg > env var > sina default.
+
+    ``explicit`` is what a caller passed (may be ``None`` when unset, e.g. a
+    config field that wasn't provided). Empty/None falls through to the
+    ``ALPHAAGENT_AKSHARE_BACKEND`` env var, then the sina default.
+    """
+    value = (explicit or os.environ.get("ALPHAAGENT_AKSHARE_BACKEND") or _DEFAULT_DAILY_BACKEND)
+    value = value.lower()
+    if value not in ("eastmoney", "sina"):
+        raise ValueError(
+            f"daily_backend must be 'eastmoney' or 'sina', got {value!r}"
+        )
+    return value  # type: ignore[return-value]
+
 
 class AkShareDataSource(DataSource):
     """Fetches A-share bars via AkShare.
@@ -38,14 +62,10 @@ class AkShareDataSource(DataSource):
     def __init__(
         self,
         adjust: str = "qfq",
-        daily_backend: DailyBackend = "eastmoney",
+        daily_backend: DailyBackend | None = None,
     ) -> None:
-        if daily_backend not in ("eastmoney", "sina"):
-            raise ValueError(
-                f"daily_backend must be 'eastmoney' or 'sina', got {daily_backend!r}"
-            )
         self.adjust = adjust
-        self.daily_backend = daily_backend
+        self.daily_backend = resolve_daily_backend(daily_backend)
 
     def get_bars(
         self,

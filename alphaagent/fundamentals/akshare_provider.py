@@ -42,6 +42,102 @@ def _int(x: Any) -> int | None:
     return int(f) if f is not None else None
 
 
+# How many most-recent periods of financials to keep. The datacenter abstract
+# returns ~100+ quarterly columns; the agent only needs recent history.
+_FIN_MAX_PERIODS = 12
+
+# Indicator-name aliases for the current akshare ``stock_financial_abstract``
+# schema (columns: 选项, 指标, <YYYYMMDD>...). Names drift across akshare
+# versions, so each field lists candidates tried in order. Values are native
+# percents for ratios (e.g. ROE 12.5 == 12.5%) and 元 for amounts.
+_FIN_ALIASES: dict[str, tuple[str, ...]] = {
+    "roe": ("净资产收益率(ROE)", "摊薄净资产收益率", "净资产收益率_平均", "净资产收益率"),
+    "net_margin": ("销售净利率",),
+    "gross_margin": ("毛利率", "销售毛利率"),
+    "revenue": ("营业总收入", "营业收入"),
+    "revenue_yoy": ("营业总收入增长率", "营业总收入同比增长率", "营业收入增长率"),
+    "net_income": ("归母净利润", "归属母公司股东的净利润", "净利润"),
+    "net_income_yoy": ("归属母公司净利润增长率", "归母净利润同比增长率", "净利润增长率"),
+    "debt_ratio": ("资产负债率",),
+}
+
+
+def _parse_financial_abstract(df, symbol: str) -> list[FinancialIndicators]:
+    """Parse the eastmoney datacenter ``stock_financial_abstract`` wide-form.
+
+    The indicator name lives in the ``指标`` column (``选项`` is a category that
+    repeats indicator names), and each ``YYYYMMDD`` column is one period. Earlier
+    code keyed off ``df.columns[0]`` (the category) and used stale indicator
+    names, so every field came back ``None`` — this resolves both.
+    """
+    if df is None or getattr(df, "empty", True) or "指标" not in df.columns:
+        return []
+    period_cols = [c for c in df.columns if str(c).isdigit()][:_FIN_MAX_PERIODS]
+    if not period_cols:
+        return []
+    # First occurrence of each indicator name wins (categories repeat names).
+    by_name: dict[str, Any] = {}
+    for _, row in df.iterrows():
+        nm = row.get("指标")
+        if nm is not None and nm not in by_name:
+            by_name[nm] = row
+
+    def val(field: str, period: str) -> float | None:
+        for alias in _FIN_ALIASES[field]:
+            row = by_name.get(alias)
+            if row is not None:
+                v = _float(row.get(period))
+                if v is not None:
+                    return v
+        return None
+
+    out: list[FinancialIndicators] = []
+    for period in period_cols:
+        out.append(
+            FinancialIndicators(
+                symbol=symbol,
+                period=str(period),
+                roe=val("roe", period),
+                net_margin=val("net_margin", period),
+                gross_margin=val("gross_margin", period),
+                revenue=val("revenue", period),
+                revenue_yoy=val("revenue_yoy", period),
+                net_income=val("net_income", period),
+                net_income_yoy=val("net_income_yoy", period),
+                debt_ratio=val("debt_ratio", period),
+            )
+        )
+    return out
+
+
+def _parse_financial_abstract_ths(df, symbol: str) -> list[FinancialIndicators]:
+    """Parse 同花顺 ``stock_financial_abstract_ths`` (long-form, one row/period).
+
+    Amount columns (净利润 / 营业总收入) may carry Chinese unit suffixes that
+    ``_float`` can't parse; those degrade to ``None`` while the plain-numeric
+    ratios still come through.
+    """
+    if df is None or getattr(df, "empty", True) or "报告期" not in df.columns:
+        return []
+    out: list[FinancialIndicators] = []
+    for _, row in df.head(_FIN_MAX_PERIODS).iterrows():
+        out.append(
+            FinancialIndicators(
+                symbol=symbol,
+                period=str(row.get("报告期")),
+                roe=_float(row.get("净资产收益率")),
+                net_margin=_float(row.get("销售净利率")),
+                gross_margin=None,  # not in the ths abstract
+                revenue=_float(row.get("营业总收入")),
+                revenue_yoy=_float(row.get("营业总收入同比增长率")),
+                net_income=_float(row.get("净利润")),
+                net_income_yoy=_float(row.get("净利润同比增长率")),
+                debt_ratio=_float(row.get("资产负债率")),
+            )
+        )
+    return out
+
+
 _RETRY_ATTEMPTS = 3
 _RETRY_BASE_DELAY = 0.6
 
@@ -108,8 +204,15 @@ class AkShareFundamentalsProvider(FundamentalsProvider):
     def _fetch_info(self, symbol: str) -> SecurityInfo:
         import akshare as ak
 
-        df = _retry(lambda: ak.stock_individual_info_em(symbol=symbol))
-        info = dict(zip(df["item"], df["value"], strict=False))
+        try:
+            df = _retry(lambda: ak.stock_individual_info_em(symbol=symbol))
+            info = dict(zip(df["item"], df["value"], strict=False))
+        except Exception:
+            # stock_individual_info_em hits push2.eastmoney.com, which local
+            # proxies routinely drop. Degrade to a minimal record (code as name)
+            # so overview / the research agent still work off the financials,
+            # rather than failing the whole request.
+            return SecurityInfo(symbol=symbol, name=symbol)
         listed_raw = info.get("上市时间")
         listed = None
         if listed_raw:
@@ -137,30 +240,19 @@ class AkShareFundamentalsProvider(FundamentalsProvider):
         try:
             df = _retry(lambda: ak.stock_financial_abstract(symbol=symbol))
         except Exception:
-            return []
-        if df is None or df.empty:
-            return []
-        # AkShare wide-form: columns are period strings, rows are indicators.
-        # Pivot so each column is one indicator slice per period.
-        df = df.set_index(df.columns[0])
-        out: list[FinancialIndicators] = []
-        for period in df.columns:
-            col = df[period]
-            out.append(
-                FinancialIndicators(
-                    symbol=symbol,
-                    period=str(period),
-                    roe=_float(col.get("净资产收益率")),
-                    net_margin=_float(col.get("销售净利率")),
-                    gross_margin=_float(col.get("销售毛利率")),
-                    revenue=_float(col.get("营业总收入")),
-                    revenue_yoy=_float(col.get("营业总收入同比增长率")),
-                    net_income=_float(col.get("归属母公司股东的净利润")),
-                    net_income_yoy=_float(col.get("归属母公司股东的净利润同比增长率")),
-                    debt_ratio=_float(col.get("资产负债率")),
-                )
+            df = None
+        items = _parse_financial_abstract(df, symbol)
+        if items:
+            return items
+        # Datacenter primary returned nothing / errored — fall back to 同花顺,
+        # which is served from a different host that the proxy may route fine.
+        try:
+            df_ths = _retry(
+                lambda: ak.stock_financial_abstract_ths(symbol=symbol, indicator="按报告期")
             )
-        return out
+        except Exception:
+            return []
+        return _parse_financial_abstract_ths(df_ths, symbol)
 
     def money_flow(self, symbol: str, start: date, end: date) -> list[MoneyFlow]:
         return self._cache.get_or_set(
