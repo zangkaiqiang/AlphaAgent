@@ -39,14 +39,15 @@
 
 新增 `web/src/styles/echarts-dark.ts`:一个 echarts 主题对象(深底、网格线 `--border`、坐标轴/文字 `--text-muted`、蜡烛 涨红跌绿),通过 `echarts.registerTheme('aa-dark', ...)` 注册;`KLineChart`/`EquityChart`/`RankingBar` 初始化时用该主题(`echarts.init(el, 'aa-dark')`)。容器改响应式高度(替换 K线固定 480px 内联)。
 
-## 6. 公司分析页(旗舰)`pages/analysis/company/Index.vue`
+## 6. 公司分析页 `pages/analysis/company/Index.vue`
 
-重点重做,移除内联 `style=`,用 token + class:
-
-- **AI 研判 hero**:大号评级徽章(买入=红/卖出=绿/持有=中性/数据不足=灰)+ 置信度(环形或粗条);**看多(红色调)/ 风险(绿色调)双栏**带左强调边或图标;一句话摘要置顶醒目;免责声明弱化置底。AI 卡片**独立 loading skeleton**(运行分析时)。— 此区是 Effort B agentic 输出将来插入处,结构上预留(可展示「智能体已获取:K线/财务/…」之类的来源行)。
+按新 token 精修(移除内联 `style=`,用 class):
 - 头部:name/symbol/industry + KPI(总市值/流通市值/PE)统一 stat 样式;多窗口收益标签红涨绿跌。
 - K线卡 + 财务表:按新 token 精修;财务表数字等宽对齐。
-- 搜索框与结果视觉上连为一体(去掉孤立卡片感)。
+- 搜索框与结果视觉上连为一体。
+- **AI 研判区**:SP1 仅做**深色化主题适配**(现有评级卡套用新风格),并**为 SP2 预留**报告查看器的位置。**带引用锚点的分章节报告查看器是 SP2 的旗舰内容,不在 SP1 实现**。
+
+可选新增 `web/src/components/common/StatCard.vue` 统一 KPI/指标卡。
 
 可选新增 `web/src/components/common/StatCard.vue` 统一 KPI/指标卡。
 
