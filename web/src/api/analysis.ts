@@ -1,4 +1,6 @@
 import http from './client'
+import type { CompanyAnalysis } from './types'
+export type { CompanyAnalysis }
 
 // ---- Company ---------------------------------------------------------
 
@@ -110,4 +112,9 @@ export const analysisApi = {
 
   marketSnapshot: () =>
     http.get<MarketSnapshot>('/analysis/market/snapshot').then(r => r.data),
+
+  agentAnalyze: (symbol: string) =>
+    http.post<CompanyAnalysis>(`/analysis/company/${symbol}/agent`).then(r => r.data),
+  agentHistory: (symbol: string, limit = 10) =>
+    http.get<CompanyAnalysis[]>(`/analysis/company/${symbol}/agent/history`, { params: { limit } }).then(r => r.data),
 }

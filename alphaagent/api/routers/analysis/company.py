@@ -10,24 +10,35 @@ GET /api/analysis/company/{symbol}/financials
 
 from __future__ import annotations
 
-from datetime import date, timedelta
-from typing import Annotated
+import json
+import uuid
+from datetime import UTC, date, datetime, timedelta
+from typing import Annotated, Any
 
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from alphaagent.agent.company_analyst import AgentNotConfigured, CompanyAnalysis
 from alphaagent.analytics.company import rolling_return
-from alphaagent.api.deps import get_fundamentals_provider, get_kline_data_source
+from alphaagent.analytics.company_agent import DataUnavailable, assemble_company_context
+from alphaagent.api.deps import (
+    get_company_analyst,
+    get_fundamentals_provider,
+    get_kline_data_source,
+)
 from alphaagent.api.envelope import err, ok
 from alphaagent.api.schemas.analysis import (
+    CompanyAnalysisDTO,
     CompanyOverviewDTO,
     FinancialIndicatorsDTO,
     KLinePoint,
     SecurityInfoDTO,
 )
 from alphaagent.data.base import DataSource
+from alphaagent.data.sqlite_cache import SqliteBarCache
 from alphaagent.fundamentals.base import FundamentalsProvider
 from alphaagent.fundamentals.types import FinancialIndicators, SecurityInfo
+from alphaagent.storage.db import get_database
 
 router = APIRouter()
 
@@ -136,3 +147,67 @@ def get_overview(
         returns=returns,
     )
     return ok(overview.model_dump(mode="json"))
+
+
+def _persist_analysis(db, analysis_id, symbol, generated_at, a: CompanyAnalysis, context) -> None:
+    db.execute(
+        "INSERT OR REPLACE INTO company_analysis "
+        "(id,symbol,generated_at,rating,confidence,summary,reasons_json,risks_json,model,context_json) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (
+            analysis_id, symbol, generated_at, a.rating, a.confidence, a.summary,
+            json.dumps(a.reasons, ensure_ascii=False), json.dumps(a.risks, ensure_ascii=False),
+            a.model, json.dumps(context, ensure_ascii=False),
+        ),
+    )
+
+
+@router.post("/{symbol}/agent")
+def company_agent_analysis(
+    symbol: str,
+    provider: Annotated[FundamentalsProvider, Depends(get_fundamentals_provider)],
+    upstream: Annotated[DataSource, Depends(get_kline_data_source)],
+    analyst: Annotated[Any, Depends(get_company_analyst)],
+):
+    db = get_database()
+    bar_source = SqliteBarCache(upstream, db, "akshare_1d_qfq")
+    try:
+        context = assemble_company_context(symbol, bar_source, provider, db)
+    except DataUnavailable as e:
+        raise HTTPException(502, detail=err("DATA_UNAVAILABLE", str(e))) from e
+    try:
+        analysis = analyst.analyze(context)
+    except AgentNotConfigured as e:
+        raise HTTPException(400, detail=err("AGENT_NOT_CONFIGURED", str(e))) from e
+    except Exception as e:
+        raise HTTPException(502, detail=err("AGENT_FAILED", f"{type(e).__name__}: {e}")) from e
+
+    generated_at = datetime.now(UTC).isoformat()
+    _persist_analysis(db, str(uuid.uuid4()), symbol, generated_at, analysis, context)
+    return ok(
+        CompanyAnalysisDTO(
+            symbol=symbol, generated_at=generated_at, rating=analysis.rating,
+            confidence=analysis.confidence, summary=analysis.summary, reasons=analysis.reasons,
+            risks=analysis.risks, model=analysis.model, disclaimer=analysis.disclaimer,
+            data_complete=context.get("data_complete"),
+        ).model_dump(mode="json")
+    )
+
+
+@router.get("/{symbol}/agent/history")
+def company_agent_history(symbol: str, limit: int = 10):
+    db = get_database()
+    rows = db.query(
+        "SELECT * FROM company_analysis WHERE symbol=? ORDER BY generated_at DESC LIMIT ?",
+        (symbol, limit),
+    )
+    out = [
+        CompanyAnalysisDTO(
+            symbol=r["symbol"], generated_at=r["generated_at"], rating=r["rating"],
+            confidence=r["confidence"], summary=r["summary"] or "",
+            reasons=json.loads(r["reasons_json"] or "[]"), risks=json.loads(r["risks_json"] or "[]"),
+            model=r["model"] or "", disclaimer="",
+        ).model_dump(mode="json")
+        for r in rows
+    ]
+    return ok(out)

@@ -42,6 +42,29 @@ CREATE TABLE IF NOT EXISTS jobs (
     created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_jobs_created ON jobs(created_at);
+CREATE TABLE IF NOT EXISTS financials (
+    symbol TEXT NOT NULL,
+    period TEXT NOT NULL,
+    roe REAL, net_margin REAL, gross_margin REAL,
+    revenue REAL, revenue_yoy REAL,
+    net_income REAL, net_income_yoy REAL, debt_ratio REAL,
+    fetched_at TEXT NOT NULL,
+    PRIMARY KEY (symbol, period)
+);
+CREATE TABLE IF NOT EXISTS company_analysis (
+    id TEXT PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    generated_at TEXT NOT NULL,
+    rating TEXT NOT NULL,
+    confidence REAL,
+    summary TEXT,
+    reasons_json TEXT,
+    risks_json TEXT,
+    model TEXT,
+    context_json TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_company_analysis_symbol
+    ON company_analysis(symbol, generated_at);
 """
 
 
