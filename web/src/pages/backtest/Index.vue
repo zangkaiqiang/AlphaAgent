@@ -79,10 +79,21 @@
         </el-form-item>
 
         <el-form-item>
-          <el-button type="primary" :loading="job?.status === 'running'" @click="submit" style="width: 100%">
+          <el-button
+            type="primary"
+            :icon="VideoPlay"
+            :loading="job?.status === 'running'"
+            @click="submit"
+            class="action-button"
+          >
             {{ job?.status === 'running' ? '回测中…' : '运行回测' }}
           </el-button>
-          <el-button v-if="job?.status === 'running'" @click="cancel" style="width: 100%; margin-top: 8px;">
+          <el-button
+            v-if="job?.status === 'running'"
+            :icon="Close"
+            @click="cancel"
+            class="action-button secondary-action"
+          >
             取消
           </el-button>
         </el-form-item>
@@ -117,7 +128,7 @@
         <FillsTable :fills="result.fills" />
       </el-card>
 
-      <el-empty v-if="!job && !result" description="左侧填好配置后点击「运行回测」" />
+      <el-empty v-if="!job && !result" class="empty-state" description="左侧填好配置后点击「运行回测」" />
     </div>
   </div>
 </template>
@@ -125,6 +136,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Close, VideoPlay } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import { backtestApi } from '@/api/backtest'
 import type { BacktestResult, JobInfo, StrategyInfo } from '@/api/types'
@@ -271,32 +283,73 @@ onBeforeUnmount(closeWs)
 <style scoped>
 .grid {
   display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 16px;
-  height: 100%;
+  grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
+  gap: var(--aa-5);
+  align-items: start;
+  min-height: 100%;
 }
 .form-card {
   height: max-content;
   position: sticky;
   top: 0;
+  max-height: calc(100vh - 106px);
+}
+.form-card :deep(.el-card__body) {
+  max-height: calc(100vh - 156px);
+  overflow-y: auto;
 }
 .results {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--aa-4);
+  min-width: 0;
 }
 .card :deep(.el-card__header) {
-  padding: 12px 16px;
+  padding: var(--aa-3) var(--aa-4);
   font-weight: 600;
 }
 .job-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--aa-3);
+  flex-wrap: wrap;
+}
+.job-header > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--aa-2);
 }
 .muted {
-  color: #6b7280;
+  color: var(--aa-text-muted);
   font-weight: normal;
   font-size: 13px;
+}
+.action-button {
+  width: 100%;
+}
+.secondary-action {
+  margin-top: var(--aa-2);
+}
+.empty-state {
+  min-height: min(520px, calc(100vh - 128px));
+}
+:deep(.el-divider) {
+  margin: 18px 0 14px;
+}
+
+@media (max-width: 980px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-card {
+    position: static;
+    max-height: none;
+  }
+
+  .form-card :deep(.el-card__body) {
+    max-height: none;
+  }
 }
 </style>

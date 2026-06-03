@@ -62,7 +62,7 @@
         <div class="card-accent-bar report-accent-bar" />
         <div class="card-header">
           <span class="card-title">AI 研究报告</span>
-          <el-button type="primary" :loading="agentLoading" @click="runAgent" size="small">
+          <el-button type="primary" :icon="Memo" :loading="agentLoading" @click="runAgent" size="small">
             生成研究报告
           </el-button>
         </div>
@@ -297,6 +297,7 @@ import { useSessionStore } from '@/stores/session'
 import SymbolPicker from '@/components/common/SymbolPicker.vue'
 import KLineChart from '@/components/chart/KLineChart.vue'
 import StatCard from '@/components/common/StatCard.vue'
+import { Memo } from '@element-plus/icons-vue'
 
 // Allowlist URL schemes for source links — blocks javascript:/data: XSS in news data.
 function safeHref(u: unknown): string {
@@ -415,8 +416,9 @@ function pctClass(v: number | null) {
   background: var(--aa-surface);
   border: 1px solid var(--aa-border);
   border-radius: var(--aa-radius);
-  padding: var(--aa-4);
-  max-width: 560px;
+  box-shadow: var(--aa-shadow);
+  padding: var(--aa-3);
+  max-width: 640px;
 }
 
 /* ── Base card ────────────────────────────────────────────────────── */
@@ -451,9 +453,8 @@ function pctClass(v: number | null) {
 .card-title {
   font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   color: var(--aa-text);
-  text-transform: uppercase;
 }
 .card-body {
   padding: var(--aa-4) var(--aa-4) var(--aa-4) calc(var(--aa-4) + 10px);
@@ -587,7 +588,7 @@ function pctClass(v: number | null) {
 .report-rating-badge {
   font-size: 28px;
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   line-height: 1;
 }
 .rating-buy     { color: var(--aa-pos); }
@@ -598,8 +599,7 @@ function pctClass(v: number | null) {
 .report-rating-en {
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   margin-top: 2px;
 }
 
@@ -649,7 +649,7 @@ function pctClass(v: number | null) {
 .report-model-tag {
   font-size: 10px;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   padding: 2px 6px;
   border-radius: var(--aa-radius-sm);
   background: var(--aa-surface-2);
@@ -688,8 +688,7 @@ function pctClass(v: number | null) {
   font-size: 13px;
   font-weight: 700;
   color: var(--aa-accent);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   margin: 0 0 var(--aa-2);
 }
 .report-section-body .report-para {
@@ -742,8 +741,7 @@ function pctClass(v: number | null) {
 .report-sources-title {
   font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   color: var(--aa-text-muted);
 }
 .report-sources-count { font-size: 11px; }
@@ -826,8 +824,7 @@ function pctClass(v: number | null) {
   flex-shrink: 0;
   font-size: 10px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   color: var(--aa-text-muted);
   padding: 2px 6px;
   border: 1px solid var(--aa-border);
@@ -851,8 +848,7 @@ function pctClass(v: number | null) {
   background: var(--aa-surface-2) !important;
   color: var(--aa-text-muted);
   font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   font-weight: 600;
 }
 .fin-table :deep(.el-table__row) {

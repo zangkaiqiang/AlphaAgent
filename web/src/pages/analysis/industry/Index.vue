@@ -150,16 +150,20 @@ function rowClass({ row }: { row: IndustrySummary }) {
   display: flex;
   flex-direction: column;
   gap: var(--aa-4);
+  min-width: 0;
 }
 .row {
   display: grid;
-  grid-template-columns: 420px 1fr;
+  grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
   gap: var(--aa-4);
+  align-items: start;
 }
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--aa-3);
+  flex-wrap: wrap;
 }
 .pos { color: var(--aa-pos); font-weight: 600; }
 .neg { color: var(--aa-neg); font-weight: 600; }
@@ -167,5 +171,11 @@ function rowClass({ row }: { row: IndustrySummary }) {
 :deep(.el-table .selected td) {
   background: var(--aa-surface-2) !important;
   border-left: 3px solid var(--aa-accent);
+}
+
+@media (max-width: 980px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

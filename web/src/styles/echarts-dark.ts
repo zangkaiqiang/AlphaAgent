@@ -6,22 +6,22 @@ export const AA_DARK = 'aa-dark'
 
 echarts.registerTheme(AA_DARK, {
   backgroundColor: 'transparent',
-  textStyle: { color: '#8b97a7' },
-  title: { textStyle: { color: '#e6edf3' } },
-  legend: { textStyle: { color: '#8b97a7' } },
-  grid: { borderColor: '#26303c' },
+  textStyle: { color: '#95a39b' },
+  title: { textStyle: { color: '#edf2ee' } },
+  legend: { textStyle: { color: '#95a39b' } },
+  grid: { borderColor: '#28342f' },
   categoryAxis: {
-    axisLine: { lineStyle: { color: '#33404f' } },
-    splitLine: { lineStyle: { color: '#1b2230' } },
-    axisLabel: { color: '#8b97a7' },
+    axisLine: { lineStyle: { color: '#3a4a43' } },
+    splitLine: { lineStyle: { color: '#1d2421' } },
+    axisLabel: { color: '#95a39b' },
   },
   valueAxis: {
-    axisLine: { lineStyle: { color: '#33404f' } },
-    splitLine: { lineStyle: { color: '#1b2230' } },
-    axisLabel: { color: '#8b97a7' },
+    axisLine: { lineStyle: { color: '#3a4a43' } },
+    splitLine: { lineStyle: { color: '#1d2421' } },
+    axisLabel: { color: '#95a39b' },
   },
   candlestick: {
-    itemStyle: { color: '#f5455c', color0: '#27c08a', borderColor: '#f5455c', borderColor0: '#27c08a' },
+    itemStyle: { color: '#f05a68', color0: '#25c38a', borderColor: '#f05a68', borderColor0: '#25c38a' },
   },
-  color: ['#f0b429', '#5aa9e6', '#27c08a', '#f5455c', '#b48ead'],
+  color: ['#d9a93a', '#67b7dc', '#25c38a', '#f05a68', '#c188d2'],
 })

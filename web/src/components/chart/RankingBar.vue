@@ -25,7 +25,7 @@ const props = withDefaults(
 const el = ref<HTMLDivElement | null>(null)
 let chart: echarts.ECharts | null = null
 
-const colorFn = computed(() => props.color || ((v: number) => (v >= 0 ? '#f5455c' : '#27c08a')))
+const colorFn = computed(() => props.color || ((v: number) => (v >= 0 ? '#f05a68' : '#25c38a')))
 const fmt = computed(() => props.formatter || ((v: number) => v.toFixed(2)))
 
 function render() {

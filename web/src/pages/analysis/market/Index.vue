@@ -105,6 +105,7 @@ function fmtFlow(v: number | null) {
   display: flex;
   flex-direction: column;
   gap: var(--aa-4);
+  min-width: 0;
 }
 .indices {
   display: grid;
@@ -113,10 +114,15 @@ function fmtFlow(v: number | null) {
 }
 .idx-card {
   text-align: center;
-  padding: 4px 0;
   background: var(--aa-surface);
   border: 1px solid var(--aa-border);
   border-radius: var(--aa-radius);
+}
+.idx-card :deep(.el-card__body) {
+  min-height: 118px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 .idx-name {
   font-size: 14px;
@@ -134,6 +140,7 @@ function fmtFlow(v: number | null) {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: var(--aa-4);
+  align-items: stretch;
 }
 .breadth-bars {
   display: flex;
@@ -158,4 +165,10 @@ function fmtFlow(v: number | null) {
 .neg { color: var(--aa-neg); font-weight: 600; }
 .northbound { text-align: center; padding: var(--aa-4) 0; }
 .big { font-size: 32px; font-weight: 700; }
+
+@media (max-width: 980px) {
+  .two-cols {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

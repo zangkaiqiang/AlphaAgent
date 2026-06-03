@@ -71,8 +71,8 @@ function render() {
       showSymbol: false,
       data: dd,
       areaStyle: { opacity: 0.15 },
-      lineStyle: { width: 1, color: '#ef4444' },
-      itemStyle: { color: '#ef4444' },
+      lineStyle: { width: 1, color: '#f05a68' },
+      itemStyle: { color: '#f05a68' },
     },
   ]
 

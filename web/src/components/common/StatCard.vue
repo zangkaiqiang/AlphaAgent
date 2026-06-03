@@ -26,11 +26,11 @@ defineProps<{
   border: 1px solid var(--aa-border);
   border-radius: var(--aa-radius-sm);
   min-width: 120px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.025) inset;
 }
 .stat-label {
   font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
 }
 .stat-value {
   font-size: 17px;

@@ -1,10 +1,10 @@
 <template>
   <el-container class="app-shell">
-    <el-aside width="220px" class="sidebar">
+    <el-aside width="232px" class="sidebar">
       <!-- Brand area -->
       <div class="brand">
         <div class="brand-mark">
-          <el-icon :size="16"><Aim /></el-icon>
+          <el-icon :size="17"><Aim /></el-icon>
         </div>
         <div class="brand-text">
           <span class="brand-name">AlphaAgent</span>
@@ -50,7 +50,7 @@
     </el-aside>
 
     <el-container class="main-container">
-      <el-header class="topbar" height="52px">
+      <el-header class="topbar" height="56px">
         <div class="topbar-left">
           <div class="page-section">{{ currentSection }}</div>
           <div class="topbar-sep">/</div>
@@ -128,12 +128,10 @@ const currentSection = computed(() => {
 .sidebar {
   display: flex;
   flex-direction: column;
-  background: var(--aa-surface);
+  background: linear-gradient(180deg, var(--aa-surface-sidebar) 0%, var(--aa-surface) 100%);
   border-right: 1px solid var(--aa-border);
   overflow: hidden;
-  box-shadow: 1px 0 0 var(--aa-border);
-  /* subtle inner right shadow for depth */
-  filter: drop-shadow(2px 0 8px rgba(0, 0, 0, 0.32));
+  box-shadow: 1px 0 0 rgba(255, 255, 255, 0.025) inset, 12px 0 28px rgba(0, 0, 0, 0.18);
 }
 
 /* Brand area */
@@ -141,9 +139,8 @@ const currentSection = computed(() => {
   display: flex;
   align-items: center;
   gap: var(--aa-3);
-  padding: var(--aa-5) var(--aa-4);
+  padding: 22px var(--aa-4);
   border-bottom: 1px solid var(--aa-border);
-  /* subtle accent glow behind the mark */
   position: relative;
 }
 
@@ -154,25 +151,21 @@ const currentSection = computed(() => {
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(
-    90deg,
-    var(--aa-accent) 0%,
-    transparent 60%
-  );
-  opacity: 0.5;
+  background: linear-gradient(90deg, rgba(217, 169, 58, 0.75) 0%, transparent 70%);
+  opacity: 0.48;
 }
 
 .brand-mark {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--aa-accent) 0%, rgba(240, 180, 41, 0.6) 100%);
+  background: var(--aa-accent);
   border-radius: var(--aa-radius-sm);
-  color: #0b0e14;
+  color: var(--aa-on-accent);
   flex-shrink: 0;
-  box-shadow: 0 0 12px rgba(240, 180, 41, 0.3);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18) inset, 0 8px 22px rgba(0, 0, 0, 0.28);
 }
 
 .brand-text {
@@ -186,7 +179,7 @@ const currentSection = computed(() => {
   font-size: 15px;
   font-weight: 700;
   color: var(--aa-text);
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -194,7 +187,7 @@ const currentSection = computed(() => {
 .brand-tagline {
   font-size: 10px;
   color: var(--aa-text-muted);
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -204,7 +197,7 @@ const currentSection = computed(() => {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: var(--aa-2) 0;
+  padding: var(--aa-3) 0 var(--aa-4);
   /* Remove Element Plus border */
   border-right: none !important;
 }
@@ -223,16 +216,15 @@ const currentSection = computed(() => {
 
 /* Section group headers */
 .section-header {
-  padding: var(--aa-4) var(--aa-4) var(--aa-1);
-  margin-top: var(--aa-2);
+  padding: var(--aa-4) var(--aa-4) var(--aa-2);
+  margin-top: var(--aa-1);
 }
 
 .section-header span {
   font-size: 10px;
   font-weight: 600;
   color: var(--aa-text-muted);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   opacity: 0.7;
 }
 
@@ -242,16 +234,16 @@ const currentSection = computed(() => {
   --el-menu-text-color: var(--aa-text-muted);
   --el-menu-hover-bg-color: var(--aa-surface-2);
   --el-menu-active-color: var(--aa-text);
-  --el-menu-item-height: 40px;
+  --el-menu-item-height: 42px;
   border-right: none !important;
 }
 
 /* Nav items */
 :deep(.el-menu-item) {
-  margin: 1px var(--aa-2);
+  margin: 2px var(--aa-2);
   border-radius: var(--aa-radius-sm);
-  height: 40px;
-  line-height: 40px;
+  height: 42px;
+  line-height: 42px;
   padding-left: var(--aa-4) !important;
   color: var(--aa-text-muted);
   position: relative;
@@ -260,7 +252,7 @@ const currentSection = computed(() => {
 }
 
 :deep(.el-menu-item:hover) {
-  background: var(--aa-surface-2) !important;
+  background: rgba(255, 255, 255, 0.045) !important;
   color: var(--aa-text) !important;
 }
 
@@ -268,6 +260,7 @@ const currentSection = computed(() => {
 :deep(.el-menu-item.is-active) {
   background: var(--aa-surface-2) !important;
   color: var(--aa-text) !important;
+  box-shadow: 0 0 0 1px rgba(217, 169, 58, 0.16) inset;
 }
 
 :deep(.el-menu-item.is-active)::before {
@@ -279,7 +272,7 @@ const currentSection = computed(() => {
   width: 3px;
   background: var(--aa-accent);
   border-radius: 0 2px 2px 0;
-  box-shadow: 0 0 8px rgba(240, 180, 41, 0.5);
+  box-shadow: 0 0 10px rgba(217, 169, 58, 0.35);
 }
 
 /* Icon in nav items */
@@ -303,7 +296,8 @@ const currentSection = computed(() => {
 /* Nav label */
 .nav-label {
   flex: 1;
-  font-size: 13.5px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 /* "即将" coming-soon tag */
@@ -320,7 +314,7 @@ const currentSection = computed(() => {
 
 /* Sidebar footer */
 .sidebar-footer {
-  padding: var(--aa-3) var(--aa-4);
+  padding: var(--aa-3) var(--aa-4) var(--aa-4);
   border-top: 1px solid var(--aa-border);
   margin-top: auto;
 }
@@ -328,7 +322,7 @@ const currentSection = computed(() => {
 .version-label {
   font-size: 10px;
   color: var(--aa-border-strong);
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   font-variant-numeric: tabular-nums;
 }
 
@@ -346,10 +340,11 @@ const currentSection = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--aa-surface);
+  background: rgba(21, 26, 24, 0.92);
   border-bottom: 1px solid var(--aa-border);
   padding: 0 var(--aa-5);
   flex-shrink: 0;
+  backdrop-filter: blur(10px);
 }
 
 .topbar-left {
@@ -359,9 +354,9 @@ const currentSection = computed(() => {
 }
 
 .page-section {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--aa-text-muted);
-  font-weight: 500;
+  font-weight: 650;
 }
 
 .topbar-sep {
@@ -374,7 +369,7 @@ const currentSection = computed(() => {
   font-size: 15px;
   font-weight: 600;
   color: var(--aa-text);
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
 }
 
 .topbar-right {
@@ -388,12 +383,18 @@ const currentSection = computed(() => {
   color: var(--aa-text-muted) !important;
   display: flex;
   align-items: center;
-  gap: 5px;
-  transition: color 150ms ease;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--aa-border);
+  border-radius: var(--aa-radius-sm);
+  background: var(--aa-surface-2);
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
 }
 
 .api-link:hover {
   color: var(--aa-text) !important;
+  border-color: var(--aa-border-strong);
+  background: var(--aa-surface-3);
 }
 
 .api-icon {
@@ -404,7 +405,97 @@ const currentSection = computed(() => {
 .content {
   flex: 1;
   overflow-y: auto;
-  background: var(--aa-bg);
+  background:
+    linear-gradient(180deg, rgba(217, 169, 58, 0.025), transparent 170px),
+    var(--aa-bg);
   padding: var(--aa-5);
+}
+
+@media (max-width: 1080px) {
+  .sidebar {
+    width: 78px !important;
+  }
+
+  .brand {
+    justify-content: center;
+    padding: var(--aa-4) 0;
+  }
+
+  .brand-text,
+  .section-header,
+  .nav-label,
+  .coming-tag,
+  .sidebar-footer {
+    display: none;
+  }
+
+  :deep(.el-menu-item) {
+    justify-content: center;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  :deep(.el-menu-item .el-icon) {
+    margin-right: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    height: auto;
+    min-height: 100vh;
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .sidebar {
+    width: 100% !important;
+    min-height: 64px;
+    flex-direction: row;
+    align-items: center;
+    border-right: 0;
+    border-bottom: 1px solid var(--aa-border);
+  }
+
+  .brand {
+    width: 64px;
+    padding: 0;
+    border-bottom: 0;
+    flex-shrink: 0;
+  }
+
+  .brand::after {
+    display: none;
+  }
+
+  .menu {
+    min-width: 0;
+    padding: var(--aa-2);
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  :deep(.el-menu) {
+    display: flex;
+    gap: var(--aa-1);
+  }
+
+  :deep(.el-menu-item) {
+    width: 42px;
+    flex: 0 0 42px;
+  }
+
+  .main-container {
+    min-height: calc(100vh - 64px);
+  }
+
+  .topbar {
+    height: 50px;
+    padding: 0 var(--aa-4);
+  }
+
+  .content {
+    padding: var(--aa-3);
+  }
 }
 </style>

@@ -77,16 +77,18 @@
         <el-form-item style="margin-top: 16px;">
           <el-button
             type="primary"
+            :icon="Filter"
             :loading="job?.status === 'running' || job?.status === 'pending'"
             @click="submit"
-            style="width: 100%"
+            class="action-button"
           >
             {{ job?.status === 'running' || job?.status === 'pending' ? '选股中…' : '运行选股' }}
           </el-button>
           <el-button
             v-if="job?.status === 'running' || job?.status === 'pending'"
+            :icon="Close"
             @click="cancel"
-            style="width: 100%; margin-top: 8px;"
+            class="action-button secondary-action"
           >
             取消
           </el-button>
@@ -166,7 +168,7 @@
         </el-table>
       </el-card>
 
-      <el-empty v-if="!job && !screenResult" description="左侧填好配置后点击「运行选股」" />
+      <el-empty v-if="!job && !screenResult" class="empty-state" description="左侧填好配置后点击「运行选股」" />
     </div>
   </div>
 </template>
@@ -174,6 +176,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Close, Filter } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import { screenerApi } from '@/api/screener'
 import type { ScreenerJobInfo, ScreenResult, ScreenerRulesCatalog, ScreenPick, ScreenPickReason } from '@/api/types'
@@ -319,19 +322,26 @@ onBeforeUnmount(closeWs)
 <style scoped>
 .grid {
   display: grid;
-  grid-template-columns: 380px 1fr;
-  gap: var(--aa-4);
-  height: 100%;
+  grid-template-columns: minmax(330px, 380px) minmax(0, 1fr);
+  gap: var(--aa-5);
+  align-items: start;
+  min-height: 100%;
 }
 .form-card {
   height: max-content;
   position: sticky;
   top: 0;
+  max-height: calc(100vh - 106px);
+}
+.form-card :deep(.el-card__body) {
+  max-height: calc(100vh - 156px);
+  overflow-y: auto;
 }
 .results {
   display: flex;
   flex-direction: column;
   gap: var(--aa-4);
+  min-width: 0;
 }
 .card :deep(.el-card__header) {
   padding: var(--aa-3) var(--aa-4);
@@ -341,6 +351,13 @@ onBeforeUnmount(closeWs)
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--aa-3);
+  flex-wrap: wrap;
+}
+.job-header > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--aa-2);
 }
 .muted {
   color: var(--aa-text-muted);
@@ -350,8 +367,11 @@ onBeforeUnmount(closeWs)
 .rule-row {
   display: flex;
   align-items: center;
-  padding: 4px 0;
+  padding: 7px 0;
   border-bottom: 1px solid var(--aa-border);
+}
+.rule-row:last-child {
+  border-bottom: 0;
 }
 .rule-label {
   font-size: 13px;
@@ -381,5 +401,32 @@ onBeforeUnmount(closeWs)
 .detail-val {
   color: var(--aa-text);
   font-weight: 500;
+}
+.action-button {
+  width: 100%;
+}
+.secondary-action {
+  margin-top: var(--aa-2);
+}
+.empty-state {
+  min-height: min(520px, calc(100vh - 128px));
+}
+:deep(.el-divider) {
+  margin: 18px 0 14px;
+}
+
+@media (max-width: 980px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-card {
+    position: static;
+    max-height: none;
+  }
+
+  .form-card :deep(.el-card__body) {
+    max-height: none;
+  }
 }
 </style>

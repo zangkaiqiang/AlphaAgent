@@ -78,10 +78,10 @@ function render() {
         type: 'candlestick',
         data: ohlc,
         itemStyle: {
-          color: '#f5455c',         // 红涨
-          color0: '#27c08a',        // 绿跌
-          borderColor: '#f5455c',
-          borderColor0: '#27c08a',
+          color: '#f05a68',         // 红涨
+          color0: '#25c38a',        // 绿跌
+          borderColor: '#f05a68',
+          borderColor0: '#25c38a',
         },
       },
       {
@@ -90,7 +90,7 @@ function render() {
         data: calcMA(closes, 5),
         smooth: true,
         showSymbol: false,
-        lineStyle: { width: 1, color: '#fbbf24' },
+        lineStyle: { width: 1, color: '#d9a93a' },
       },
       {
         name: 'MA20',
@@ -98,7 +98,7 @@ function render() {
         data: calcMA(closes, 20),
         smooth: true,
         showSymbol: false,
-        lineStyle: { width: 1, color: '#3b82f6' },
+        lineStyle: { width: 1, color: '#67b7dc' },
       },
       {
         name: '成交量',
@@ -106,7 +106,7 @@ function render() {
         xAxisIndex: 1,
         yAxisIndex: 1,
         data: volumes,
-        itemStyle: { color: '#9ca3af' },
+        itemStyle: { color: '#95a39b' },
       },
     ],
   })

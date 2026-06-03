@@ -43,11 +43,11 @@ const items = computed(() => {
 
 <style scoped>
 .pos {
-  color: #dc2626;
+  color: var(--aa-pos);
   font-weight: 600;
 }
 .neg {
-  color: #16a34a;
+  color: var(--aa-neg);
   font-weight: 600;
 }
 </style>
