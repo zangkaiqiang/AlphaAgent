@@ -8,6 +8,7 @@ copy so analysis still works when the network is flaky.
 
 from __future__ import annotations
 
+import contextlib
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
@@ -120,10 +121,8 @@ def assemble_company_context(
         items = []
     if items:
         # Persist separately so a DB-write failure never discards fresh data.
-        try:
+        with contextlib.suppress(Exception):
             persist_financials(db, symbol, items)
-        except Exception:
-            pass
     else:
         # Fetch failed or returned nothing → fall back to the last persisted copy.
         items = load_persisted_financials(db, symbol)
