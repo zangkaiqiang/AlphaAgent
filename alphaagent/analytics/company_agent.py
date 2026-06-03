@@ -116,14 +116,16 @@ def assemble_company_context(
     data_complete = True
     try:
         items = provider.financial_indicators(symbol)
-        if items:
-            persist_financials(db, symbol, items)
-        else:
-            data_complete = False
     except Exception:
-        data_complete = False
         items = []
-    if not items:
+    if items:
+        # Persist separately so a DB-write failure never discards fresh data.
+        try:
+            persist_financials(db, symbol, items)
+        except Exception:
+            pass
+    else:
+        # Fetch failed or returned nothing → fall back to the last persisted copy.
         items = load_persisted_financials(db, symbol)
         data_complete = False
 
