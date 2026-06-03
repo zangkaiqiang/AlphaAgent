@@ -42,6 +42,35 @@
       </el-card>
 
       <el-card shadow="never">
+        <template #header>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span>AI 智能分析</span>
+            <el-button type="primary" :loading="agentLoading" @click="runAgent">运行分析</el-button>
+          </div>
+        </template>
+        <el-empty v-if="!agent" description="点击「运行分析」让 AI 综合技术面与财务给出研判" />
+        <div v-else>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+            <el-tag :type="ratingType(agent.rating)" size="large">{{ ratingLabel(agent.rating) }}</el-tag>
+            <span v-if="agent.confidence != null">置信度 {{ Math.round(agent.confidence * 100) }}%</span>
+            <el-tag v-if="agent.data_complete === false" type="warning" size="small">数据不完整</el-tag>
+          </div>
+          <p style="margin-bottom:12px">{{ agent.summary }}</p>
+          <el-row :gutter="16">
+            <el-col :span="12">
+              <strong>看多 / 支撑</strong>
+              <ul><li v-for="(r, i) in agent.reasons" :key="i">{{ r }}</li></ul>
+            </el-col>
+            <el-col :span="12">
+              <strong>风险点</strong>
+              <ul><li v-for="(r, i) in agent.risks" :key="i">{{ r }}</li></ul>
+            </el-col>
+          </el-row>
+          <el-alert v-if="agent.disclaimer" :title="agent.disclaimer" type="info" :closable="false" style="margin-top:12px" />
+        </div>
+      </el-card>
+
+      <el-card shadow="never">
         <template #header>财务指标</template>
         <el-table :data="overview.financials" stripe size="small">
           <el-table-column prop="period" label="期间" width="120" />
@@ -82,6 +111,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { analysisApi, type CompanyOverview } from '@/api/analysis'
+import type { CompanyAnalysis } from '@/api/types'
 import { useSessionStore } from '@/stores/session'
 import SymbolPicker from '@/components/common/SymbolPicker.vue'
 import KLineChart from '@/components/chart/KLineChart.vue'
@@ -91,9 +121,13 @@ const form = reactive({ symbol: session.symbol })
 const overview = ref<CompanyOverview | null>(null)
 const loading = ref(false)
 
+const agent = ref<CompanyAnalysis | null>(null)
+const agentLoading = ref(false)
+
 async function load() {
   if (!form.symbol) return
   session.setSymbol(form.symbol)
+  agent.value = null
   loading.value = true
   try {
     overview.value = await analysisApi.companyOverview(form.symbol)
@@ -103,6 +137,23 @@ async function load() {
     loading.value = false
   }
 }
+
+async function runAgent() {
+  if (!form.symbol) return
+  agentLoading.value = true
+  try {
+    agent.value = await analysisApi.agentAnalyze(form.symbol)
+  } catch {
+    // axios interceptor already showed the error via ElMessage
+  } finally {
+    agentLoading.value = false
+  }
+}
+
+const ratingType = (r: string): string =>
+  ({ BUY: 'success', SELL: 'danger', HOLD: 'info' } as Record<string, string>)[r] ?? 'warning'
+const ratingLabel = (r: string): string =>
+  ({ BUY: '买入', SELL: '卖出', HOLD: '持有', UNKNOWN: '数据不足' } as Record<string, string>)[r] ?? r
 
 onMounted(load)
 

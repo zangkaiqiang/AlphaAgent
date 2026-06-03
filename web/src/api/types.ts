@@ -139,3 +139,18 @@ export interface ScreenerRulesCatalog {
   rules: RuleInfo[]
   filters: FilterInfo[]
 }
+
+// ── Company Analysis Agent ──────────────────────────────────────────────────
+
+export interface CompanyAnalysis {
+  symbol: string
+  generated_at: string
+  rating: string
+  confidence: number | null
+  summary: string
+  reasons: string[]
+  risks: string[]
+  model: string
+  disclaimer: string
+  data_complete: boolean | null
+}
