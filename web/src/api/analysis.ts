@@ -1,6 +1,13 @@
 import http from './client'
-import type { CompanyAnalysis } from './types'
-export type { CompanyAnalysis }
+import type { ResearchReport } from './types'
+export type { ResearchReport }
+
+export interface HistoryItem {
+  id: string
+  symbol: string
+  created_at: string
+  report: ResearchReport | null
+}
 
 // ---- Company ---------------------------------------------------------
 
@@ -114,7 +121,7 @@ export const analysisApi = {
     http.get<MarketSnapshot>('/analysis/market/snapshot').then(r => r.data),
 
   agentAnalyze: (symbol: string) =>
-    http.post<CompanyAnalysis>(`/analysis/company/${symbol}/agent`).then(r => r.data),
+    http.post<ResearchReport>(`/analysis/company/${symbol}/agent`).then(r => r.data),
   agentHistory: (symbol: string, limit = 10) =>
-    http.get<CompanyAnalysis[]>(`/analysis/company/${symbol}/agent/history`, { params: { limit } }).then(r => r.data),
+    http.get<HistoryItem[]>(`/analysis/company/${symbol}/agent/history`, { params: { limit } }).then(r => r.data),
 }

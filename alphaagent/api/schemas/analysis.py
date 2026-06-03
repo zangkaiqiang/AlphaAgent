@@ -1,6 +1,7 @@
 """Analysis-module response DTOs."""
 
 from datetime import date
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -91,14 +92,26 @@ class MarketSnapshotDTO(BaseModel):
     northbound_net: float | None = None
 
 
-class CompanyAnalysisDTO(BaseModel):
+class SourceDTO(BaseModel):
+    id: int
+    type: str
+    label: str
+    detail: dict[str, Any]
+
+
+class ReportSectionDTO(BaseModel):
+    title: str
+    body: str
+
+
+class ResearchReportDTO(BaseModel):
     symbol: str
     generated_at: str
     rating: str
     confidence: float | None = None
-    summary: str
-    reasons: list[str]
-    risks: list[str]
-    model: str
+    sections: list[ReportSectionDTO]
+    sources: list[SourceDTO]
     disclaimer: str
-    data_complete: bool | None = None
+    data_complete: bool = True
+    notes: list[str] = []
+    model: str = ""

@@ -12,27 +12,29 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, timedelta
 from typing import Annotated, Any
 
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from alphaagent.agent.company_analyst import AgentNotConfigured, CompanyAnalysis
+from alphaagent.agent.company_analyst import AgentNotConfigured
 from alphaagent.analytics.company import rolling_return
-from alphaagent.analytics.company_agent import DataUnavailable, assemble_company_context
 from alphaagent.api.deps import (
-    get_company_analyst,
     get_fundamentals_provider,
     get_kline_data_source,
+    get_news_provider,
+    get_research_analyst,
 )
 from alphaagent.api.envelope import err, ok
 from alphaagent.api.schemas.analysis import (
-    CompanyAnalysisDTO,
     CompanyOverviewDTO,
     FinancialIndicatorsDTO,
     KLinePoint,
+    ReportSectionDTO,
+    ResearchReportDTO,
     SecurityInfoDTO,
+    SourceDTO,
 )
 from alphaagent.data.base import DataSource
 from alphaagent.data.sqlite_cache import SqliteBarCache
@@ -149,15 +151,43 @@ def get_overview(
     return ok(overview.model_dump(mode="json"))
 
 
-def _persist_analysis(db, analysis_id, symbol, generated_at, a: CompanyAnalysis, context) -> None:
+def _report_to_dto(report: Any, model: str = "") -> ResearchReportDTO:
+    return ResearchReportDTO(
+        symbol=report.symbol,
+        generated_at=report.generated_at,
+        rating=report.rating,
+        confidence=report.confidence,
+        sections=[ReportSectionDTO(title=s.title, body=s.body) for s in report.sections],
+        sources=[SourceDTO(id=s.id, type=s.type, label=s.label, detail=s.detail) for s in report.sources],
+        disclaimer=report.disclaimer,
+        data_complete=report.data_complete,
+        notes=list(report.notes),
+        model=model,
+    )
+
+
+def _persist_report(db, analysis_id: str, report: Any, model: str) -> None:
+    summary = report.sections[0].body[:200] if report.sections else report.rating
+    report_dict = {
+        "symbol": report.symbol,
+        "generated_at": report.generated_at,
+        "rating": report.rating,
+        "confidence": report.confidence,
+        "sections": [{"title": s.title, "body": s.body} for s in report.sections],
+        "sources": [{"id": s.id, "type": s.type, "label": s.label, "detail": s.detail} for s in report.sources],
+        "disclaimer": report.disclaimer,
+        "data_complete": report.data_complete,
+        "notes": list(report.notes),
+        "model": model,
+    }
     db.execute(
         "INSERT OR REPLACE INTO company_analysis "
-        "(id,symbol,generated_at,rating,confidence,summary,reasons_json,risks_json,model,context_json) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?)",
+        "(id,symbol,generated_at,rating,confidence,summary,reasons_json,risks_json,model,context_json,report_json) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
         (
-            analysis_id, symbol, generated_at, a.rating, a.confidence, a.summary,
-            json.dumps(a.reasons, ensure_ascii=False), json.dumps(a.risks, ensure_ascii=False),
-            a.model, json.dumps(context, ensure_ascii=False),
+            analysis_id, report.symbol, report.generated_at, report.rating, report.confidence,
+            summary, "[]", "[]", model, "{}",
+            json.dumps(report_dict, ensure_ascii=False),
         ),
     )
 
@@ -167,31 +197,21 @@ def company_agent_analysis(
     symbol: str,
     provider: Annotated[FundamentalsProvider, Depends(get_fundamentals_provider)],
     upstream: Annotated[DataSource, Depends(get_kline_data_source)],
-    analyst: Annotated[Any, Depends(get_company_analyst)],
+    news_provider: Annotated[Any, Depends(get_news_provider)],
+    analyst: Annotated[Any, Depends(get_research_analyst)],
 ):
     db = get_database()
     bar_source = SqliteBarCache(upstream, db, "akshare_1d_qfq")
+    model_name = getattr(analyst, "model", "")
     try:
-        context = assemble_company_context(symbol, bar_source, provider, db)
-    except DataUnavailable as e:
-        raise HTTPException(502, detail=err("DATA_UNAVAILABLE", str(e))) from e
-    try:
-        analysis = analyst.analyze(context)
+        report = analyst.analyze(symbol, bar_source=bar_source, provider=provider,
+                                 news_provider=news_provider, db=db)
     except AgentNotConfigured as e:
         raise HTTPException(400, detail=err("AGENT_NOT_CONFIGURED", str(e))) from e
     except Exception as e:
         raise HTTPException(502, detail=err("AGENT_FAILED", f"{type(e).__name__}: {e}")) from e
-
-    generated_at = datetime.now(UTC).isoformat()
-    _persist_analysis(db, str(uuid.uuid4()), symbol, generated_at, analysis, context)
-    return ok(
-        CompanyAnalysisDTO(
-            symbol=symbol, generated_at=generated_at, rating=analysis.rating,
-            confidence=analysis.confidence, summary=analysis.summary, reasons=analysis.reasons,
-            risks=analysis.risks, model=analysis.model, disclaimer=analysis.disclaimer,
-            data_complete=context.get("data_complete"),
-        ).model_dump(mode="json")
-    )
+    _persist_report(db, str(uuid.uuid4()), report, model_name)
+    return ok(_report_to_dto(report, model_name).model_dump(mode="json"))
 
 
 @router.get("/{symbol}/agent/history")
@@ -201,13 +221,14 @@ def company_agent_history(symbol: str, limit: int = 10):
         "SELECT * FROM company_analysis WHERE symbol=? ORDER BY generated_at DESC LIMIT ?",
         (symbol, limit),
     )
-    out = [
-        CompanyAnalysisDTO(
-            symbol=r["symbol"], generated_at=r["generated_at"], rating=r["rating"],
-            confidence=r["confidence"], summary=r["summary"] or "",
-            reasons=json.loads(r["reasons_json"] or "[]"), risks=json.loads(r["risks_json"] or "[]"),
-            model=r["model"] or "", disclaimer="",
-        ).model_dump(mode="json")
-        for r in rows
-    ]
+    out = []
+    for r in rows:
+        row_dict: dict[str, Any] = {
+            "symbol": r["symbol"],
+            "generated_at": r["generated_at"],
+            "rating": r["rating"],
+            "confidence": r["confidence"],
+            "report": json.loads(r["report_json"]) if r["report_json"] else None,
+        }
+        out.append(row_dict)
     return ok(out)
