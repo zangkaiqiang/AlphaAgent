@@ -149,19 +149,23 @@ function rowClass({ row }: { row: IndustrySummary }) {
 .page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--aa-4);
 }
 .row {
   display: grid;
   grid-template-columns: 420px 1fr;
-  gap: 16px;
+  gap: var(--aa-4);
 }
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
-.pos { color: #dc2626; font-weight: 600; }
-.neg { color: #16a34a; font-weight: 600; }
-:deep(.el-table .selected) { background: #fef3c7; }
+.pos { color: var(--aa-pos); font-weight: 600; }
+.neg { color: var(--aa-neg); font-weight: 600; }
+/* Replace light-yellow selected highlight with dark-theme token */
+:deep(.el-table .selected td) {
+  background: var(--aa-surface-2) !important;
+  border-left: 3px solid var(--aa-accent);
+}
 </style>

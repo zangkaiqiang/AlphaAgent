@@ -1,7 +1,7 @@
 <template>
-  <el-card shadow="never">
+  <el-card shadow="never" class="strategies-card">
     <template #header>策略库</template>
-    <el-table :data="store.list" stripe>
+    <el-table :data="store.list" stripe class="strategies-table">
       <el-table-column prop="name" label="名称" width="220" />
       <el-table-column prop="class_name" label="实现类" width="240" />
       <el-table-column label="参数">
@@ -12,7 +12,7 @@
             type="info"
             effect="plain"
             size="small"
-            style="margin-right: 6px;"
+            class="param-tag"
           >
             {{ p.name }} ({{ p.type }}{{ p.default !== null ? `=${p.default}` : '' }})
           </el-tag>
@@ -30,3 +30,22 @@ import { useStrategiesStore } from '@/stores/strategies'
 const store = useStrategiesStore()
 onMounted(() => store.load())
 </script>
+
+<style scoped>
+.strategies-card {
+  background: var(--aa-surface);
+  border: 1px solid var(--aa-border);
+  border-radius: var(--aa-radius);
+}
+.strategies-table {
+  background: var(--aa-surface);
+}
+.param-tag {
+  margin-right: var(--aa-2);
+  margin-bottom: 2px;
+  background: var(--aa-surface-2);
+  border-color: var(--aa-border-strong);
+  color: var(--aa-text-muted);
+  font-size: 12px;
+}
+</style>

@@ -1,0 +1,56 @@
+:root {
+  /* surfaces */
+  --aa-bg: #0b0e14;
+  --aa-surface: #141a23;
+  --aa-surface-2: #1b2230;
+  --aa-border: #26303c;
+  --aa-border-strong: #33404f;
+  /* text */
+  --aa-text: #e6edf3;
+  --aa-text-muted: #8b97a7;
+  /* brand + semantics (A股 红涨绿跌) */
+  --aa-accent: #f0b429;
+  --aa-pos: #f5455c;   /* 涨 = 红 */
+  --aa-neg: #27c08a;   /* 跌 = 绿 */
+  /* shape */
+  --aa-radius: 10px;
+  --aa-radius-sm: 6px;
+  --aa-shadow: 0 1px 0 rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.28);
+  /* spacing scale */
+  --aa-1: 4px; --aa-2: 8px; --aa-3: 12px; --aa-4: 16px; --aa-5: 24px; --aa-6: 32px;
+}
+
+/* Map Element Plus dark CSS variables onto our tokens so every EP component
+   (card, table, tag, button, descriptions, menu) adopts the dark palette. */
+html.dark {
+  --el-bg-color: var(--aa-surface);
+  --el-bg-color-overlay: var(--aa-surface-2);
+  --el-bg-color-page: var(--aa-bg);
+  --el-fill-color-blank: var(--aa-surface);
+  --el-fill-color-light: var(--aa-surface-2);
+  --el-border-color: var(--aa-border);
+  --el-border-color-light: var(--aa-border);
+  --el-border-color-lighter: var(--aa-border);
+  --el-text-color-primary: var(--aa-text);
+  --el-text-color-regular: var(--aa-text);
+  --el-text-color-secondary: var(--aa-text-muted);
+  --el-color-primary: var(--aa-accent);
+  --el-color-danger: var(--aa-pos);    /* 红 = 涨 */
+  --el-color-success: var(--aa-neg);   /* 绿 = 跌 */
+}
+
+html, body, #app { height: 100%; }
+body {
+  margin: 0;
+  background: var(--aa-bg);
+  color: var(--aa-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+.aa-num { font-variant-numeric: tabular-nums; }
+.aa-pos { color: var(--aa-pos); }
+.aa-neg { color: var(--aa-neg); }
+.aa-muted { color: var(--aa-text-muted); }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--aa-border-strong); border-radius: 8px; }
+::-webkit-scrollbar-track { background: transparent; }

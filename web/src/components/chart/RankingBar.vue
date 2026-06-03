@@ -5,6 +5,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as echarts from 'echarts/core'
+import { AA_DARK } from '@/styles/echarts-dark'
 import { BarChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -24,7 +25,7 @@ const props = withDefaults(
 const el = ref<HTMLDivElement | null>(null)
 let chart: echarts.ECharts | null = null
 
-const colorFn = computed(() => props.color || ((v: number) => (v >= 0 ? '#dc2626' : '#16a34a')))
+const colorFn = computed(() => props.color || ((v: number) => (v >= 0 ? '#f5455c' : '#27c08a')))
 const fmt = computed(() => props.formatter || ((v: number) => v.toFixed(2)))
 
 function render() {
@@ -59,7 +60,7 @@ function render() {
 }
 
 onMounted(() => {
-  chart = echarts.init(el.value!)
+  chart = echarts.init(el.value!, AA_DARK)
   render()
   window.addEventListener('resize', resize)
 })
