@@ -142,15 +142,30 @@ export interface ScreenerRulesCatalog {
 
 // ── Company Analysis Agent ──────────────────────────────────────────────────
 
-export interface CompanyAnalysis {
+export interface ReportSource {
+  id: number
+  type: string
+  label: string
+  detail: Record<string, any>
+}
+
+export interface ReportSection {
+  title: string
+  body: string
+}
+
+export interface ResearchReport {
   symbol: string
   generated_at: string
   rating: string
   confidence: number | null
-  summary: string
-  reasons: string[]
-  risks: string[]
-  model: string
+  sections: ReportSection[]
+  sources: ReportSource[]
   disclaimer: string
-  data_complete: boolean | null
+  data_complete: boolean
+  notes: string[]
+  model: string
 }
+
+/** @deprecated use ResearchReport */
+export type CompanyAnalysis = ResearchReport
