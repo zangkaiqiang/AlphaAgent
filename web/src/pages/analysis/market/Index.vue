@@ -61,7 +61,7 @@
         <el-card shadow="never">
           <template #header>北向资金</template>
           <div class="northbound">
-            <div class="big" :class="(snap.northbound_net ?? 0) >= 0 ? 'pos' : 'neg'">
+            <div class="big aa-num" :class="(snap.northbound_net ?? 0) >= 0 ? 'pos' : 'neg'">
               {{ fmtFlow(snap.northbound_net) }}
             </div>
             <div class="muted">沪深港通当日净流入</div>
@@ -104,52 +104,58 @@ function fmtFlow(v: number | null) {
 .page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--aa-4);
 }
 .indices {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
+  gap: var(--aa-3);
 }
 .idx-card {
   text-align: center;
   padding: 4px 0;
+  background: var(--aa-surface);
+  border: 1px solid var(--aa-border);
+  border-radius: var(--aa-radius);
 }
 .idx-name {
   font-size: 14px;
-  margin-bottom: 6px;
+  margin-bottom: var(--aa-2);
+  color: var(--aa-text);
 }
 .idx-last {
   font-size: 24px;
   font-weight: 700;
   margin-bottom: 4px;
+  font-variant-numeric: tabular-nums;
 }
-.muted { color: #6b7280; font-size: 12px; font-weight: normal; }
+.muted { color: var(--aa-text-muted); font-size: 12px; font-weight: normal; }
 .two-cols {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 16px;
+  gap: var(--aa-4);
 }
 .breadth-bars {
   display: flex;
   height: 32px;
-  border-radius: 4px;
+  border-radius: var(--aa-radius-sm);
   overflow: hidden;
 }
 .bar {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--aa-bg);
   font-size: 13px;
   font-weight: 600;
   transition: flex 0.3s;
 }
-.pos-bg { background: #dc2626; }
-.neutral-bg { background: #9ca3af; }
-.neg-bg { background: #16a34a; }
-.pos { color: #dc2626; font-weight: 600; }
-.neg { color: #16a34a; font-weight: 600; }
-.northbound { text-align: center; padding: 16px 0; }
+/* A股 红涨绿跌 using design tokens */
+.pos-bg { background: var(--aa-pos); }
+.neutral-bg { background: var(--aa-border-strong); }
+.neg-bg { background: var(--aa-neg); }
+.pos { color: var(--aa-pos); font-weight: 600; }
+.neg { color: var(--aa-neg); font-weight: 600; }
+.northbound { text-align: center; padding: var(--aa-4) 0; }
 .big { font-size: 32px; font-weight: 700; }
 </style>

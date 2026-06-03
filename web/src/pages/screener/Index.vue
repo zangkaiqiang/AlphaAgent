@@ -144,7 +144,19 @@
                   </el-table-column>
                   <el-table-column label="详情">
                     <template #default="{ row: r }: { row: ScreenPickReason }">
-                      <span class="detail-text">{{ JSON.stringify(r.detail) }}</span>
+                      <div class="detail-kv">
+                        <template v-if="r.detail && typeof r.detail === 'object' && !Array.isArray(r.detail)">
+                          <span
+                            v-for="(val, key) in (r.detail as Record<string, unknown>)"
+                            :key="String(key)"
+                            class="detail-kv-item"
+                          >
+                            <span class="detail-key">{{ key }}</span>
+                            <span class="detail-val">{{ val }}</span>
+                          </span>
+                        </template>
+                        <span v-else class="detail-val">{{ r.detail }}</span>
+                      </div>
                     </template>
                   </el-table-column>
                 </el-table>
@@ -308,7 +320,7 @@ onBeforeUnmount(closeWs)
 .grid {
   display: grid;
   grid-template-columns: 380px 1fr;
-  gap: 16px;
+  gap: var(--aa-4);
   height: 100%;
 }
 .form-card {
@@ -319,10 +331,10 @@ onBeforeUnmount(closeWs)
 .results {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--aa-4);
 }
 .card :deep(.el-card__header) {
-  padding: 12px 16px;
+  padding: var(--aa-3) var(--aa-4);
   font-weight: 600;
 }
 .job-header {
@@ -331,7 +343,7 @@ onBeforeUnmount(closeWs)
   justify-content: space-between;
 }
 .muted {
-  color: #6b7280;
+  color: var(--aa-text-muted);
   font-weight: normal;
   font-size: 13px;
 }
@@ -339,17 +351,35 @@ onBeforeUnmount(closeWs)
   display: flex;
   align-items: center;
   padding: 4px 0;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--aa-border);
 }
 .rule-label {
   font-size: 13px;
 }
 .reasons-panel {
-  padding: 8px 16px;
+  padding: var(--aa-2) var(--aa-4);
 }
-.detail-text {
-  font-size: 12px;
-  color: #6b7280;
-  word-break: break-all;
+/* Structured key/value detail instead of raw JSON */
+.detail-kv {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px var(--aa-2);
+}
+.detail-kv-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--aa-surface-2);
+  border: 1px solid var(--aa-border);
+  border-radius: var(--aa-radius-sm);
+  padding: 1px 6px;
+  font-size: 11px;
+}
+.detail-key {
+  color: var(--aa-text-muted);
+}
+.detail-val {
+  color: var(--aa-text);
+  font-weight: 500;
 }
 </style>
