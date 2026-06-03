@@ -45,3 +45,18 @@ def get_company_analyst():
 
     model = os.environ.get("ALPHAAGENT_AGENT_MODEL", "claude-sonnet-4-6")
     return CompanyAnalyst(model=model)
+
+
+def get_news_provider():
+    """News provider for the research analyst. Overridable in tests."""
+    from alphaagent.fundamentals.news import AkShareNewsProvider
+
+    return AkShareNewsProvider()
+
+
+def get_research_analyst():
+    """Agentic research analyst. Overridable in tests via dependency_overrides."""
+    from alphaagent.agent.research_analyst import ResearchAnalyst
+
+    model = os.environ.get("ALPHAAGENT_AGENT_MODEL", "claude-sonnet-4-6")
+    return ResearchAnalyst(model=model)
