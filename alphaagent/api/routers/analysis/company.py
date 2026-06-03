@@ -17,7 +17,6 @@ from typing import Annotated, Any
 
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import JSONResponse
 
 from alphaagent.agent.company_analyst import AgentNotConfigured, CompanyAnalysis
 from alphaagent.analytics.company import rolling_return
@@ -175,13 +174,13 @@ def company_agent_analysis(
     try:
         context = assemble_company_context(symbol, bar_source, provider, db)
     except DataUnavailable as e:
-        return JSONResponse(status_code=502, content=err("DATA_UNAVAILABLE", str(e)))
+        raise HTTPException(502, detail=err("DATA_UNAVAILABLE", str(e))) from e
     try:
         analysis = analyst.analyze(context)
     except AgentNotConfigured as e:
-        return JSONResponse(status_code=400, content=err("AGENT_NOT_CONFIGURED", str(e)))
-    except Exception as e:  # noqa: BLE001
-        return JSONResponse(status_code=502, content=err("AGENT_FAILED", f"{type(e).__name__}: {e}"))
+        raise HTTPException(400, detail=err("AGENT_NOT_CONFIGURED", str(e))) from e
+    except Exception as e:
+        raise HTTPException(502, detail=err("AGENT_FAILED", f"{type(e).__name__}: {e}")) from e
 
     generated_at = datetime.now(UTC).isoformat()
     _persist_analysis(db, str(uuid.uuid4()), symbol, generated_at, analysis, context)

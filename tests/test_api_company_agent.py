@@ -84,4 +84,4 @@ def test_agent_not_configured_returns_400(client):
     app.dependency_overrides[get_company_analyst] = lambda: _BrokenAnalyst()
     r = client.post("/api/analysis/company/600000/agent")
     assert r.status_code == 400
-    assert r.json()["error"]["code"] == "AGENT_NOT_CONFIGURED"
+    assert r.json()["detail"]["error"]["code"] == "AGENT_NOT_CONFIGURED"
