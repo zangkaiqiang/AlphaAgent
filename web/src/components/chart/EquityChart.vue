@@ -5,6 +5,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as echarts from 'echarts/core'
+import { AA_DARK } from '@/styles/echarts-dark'
 import { LineChart } from 'echarts/charts'
 import {
   GridComponent,
@@ -105,7 +106,7 @@ function render() {
 }
 
 onMounted(() => {
-  chart = echarts.init(el.value!)
+  chart = echarts.init(el.value!, AA_DARK)
   render()
   window.addEventListener('resize', resize)
 })

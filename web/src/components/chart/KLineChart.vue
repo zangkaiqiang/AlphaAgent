@@ -5,6 +5,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as echarts from 'echarts/core'
+import { AA_DARK } from '@/styles/echarts-dark'
 import { CandlestickChart, BarChart, LineChart } from 'echarts/charts'
 import {
   GridComponent,
@@ -77,10 +78,10 @@ function render() {
         type: 'candlestick',
         data: ohlc,
         itemStyle: {
-          color: '#dc2626',         // 红涨
-          color0: '#16a34a',        // 绿跌
-          borderColor: '#dc2626',
-          borderColor0: '#16a34a',
+          color: '#f5455c',         // 红涨
+          color0: '#27c08a',        // 绿跌
+          borderColor: '#f5455c',
+          borderColor0: '#27c08a',
         },
       },
       {
@@ -112,7 +113,7 @@ function render() {
 }
 
 onMounted(() => {
-  chart = echarts.init(el.value!)
+  chart = echarts.init(el.value!, AA_DARK)
   render()
   window.addEventListener('resize', resize)
 })
