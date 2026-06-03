@@ -37,3 +37,13 @@ def get_kline_data_source() -> DataSource:
     from alphaagent.data.akshare_source import AkShareDataSource
 
     return AkShareDataSource(adjust="qfq")
+
+
+def get_company_analyst():
+    """Company-analysis LLM agent. Overridable in tests via dependency_overrides."""
+    import os
+
+    from alphaagent.agent.company_analyst import CompanyAnalyst
+
+    model = os.environ.get("ALPHAAGENT_AGENT_MODEL", "claude-sonnet-4-6")
+    return CompanyAnalyst(model=model)
