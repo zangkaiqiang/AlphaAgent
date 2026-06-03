@@ -65,6 +65,11 @@ CREATE TABLE IF NOT EXISTS company_analysis (
 );
 CREATE INDEX IF NOT EXISTS idx_company_analysis_symbol
     ON company_analysis(symbol, generated_at);
+CREATE TABLE IF NOT EXISTS news (
+    symbol TEXT NOT NULL, url TEXT NOT NULL, title TEXT, date TEXT,
+    source TEXT, summary TEXT, fetched_at TEXT NOT NULL,
+    PRIMARY KEY (symbol, url)
+);
 """
 
 
@@ -90,6 +95,13 @@ class Database:
             if "kind" not in cols:
                 self._conn.execute(
                     "ALTER TABLE jobs ADD COLUMN kind TEXT NOT NULL DEFAULT 'backtest'"
+                )
+                self._conn.commit()
+            # Idempotent migration: add 'report_json' column to pre-existing company_analysis DBs.
+            cols = {row[1] for row in self._conn.execute("PRAGMA table_info(company_analysis)")}
+            if "report_json" not in cols:
+                self._conn.execute(
+                    "ALTER TABLE company_analysis ADD COLUMN report_json TEXT"
                 )
                 self._conn.commit()
 
