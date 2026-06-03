@@ -184,8 +184,8 @@
                         <span v-if="s.detail.date">{{ s.detail.date }}</span>
                         <span v-if="s.detail.source">· {{ s.detail.source }}</span>
                         <a
-                          v-if="s.detail.url"
-                          :href="String(s.detail.url)"
+                          v-if="safeHref(s.detail.url)"
+                          :href="safeHref(s.detail.url)"
                           target="_blank"
                           rel="noopener noreferrer"
                           class="source-ext-link"
@@ -297,6 +297,16 @@ import { useSessionStore } from '@/stores/session'
 import SymbolPicker from '@/components/common/SymbolPicker.vue'
 import KLineChart from '@/components/chart/KLineChart.vue'
 import StatCard from '@/components/common/StatCard.vue'
+
+// Allowlist URL schemes for source links — blocks javascript:/data: XSS in news data.
+function safeHref(u: unknown): string {
+  try {
+    const p = new URL(String(u))
+    return ['http:', 'https:', 'mailto:'].includes(p.protocol) ? p.href : ''
+  } catch {
+    return ''
+  }
+}
 
 const session = useSessionStore()
 const form = reactive({ symbol: session.symbol })
