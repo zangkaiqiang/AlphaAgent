@@ -60,18 +60,25 @@ def _coerce_list(raw: Any) -> list[str]:
     return [str(x) for x in raw] if isinstance(raw, list) else []
 
 
+def _coerce_confidence(raw: Any) -> float | None:
+    # LLMs sometimes quote the number ("0.8"); never let a bad value raise.
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
+
+
 def _parse_analysis(text: str, *, model: str) -> CompanyAnalysis:
     start, end = text.find("{"), text.rfind("}")
     if start != -1 and end > start:
         try:
             obj = json.loads(text[start : end + 1])
-            conf = obj.get("confidence")
             return CompanyAnalysis(
                 rating=_coerce_rating(obj.get("rating")),
                 summary=str(obj.get("summary") or ""),
                 reasons=_coerce_list(obj.get("reasons")),
                 risks=_coerce_list(obj.get("risks")),
-                confidence=float(conf) if isinstance(conf, (int, float)) else None,
+                confidence=_coerce_confidence(obj.get("confidence")),
                 model=model,
             )
         except (ValueError, TypeError):
